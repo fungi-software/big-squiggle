@@ -1,58 +1,33 @@
-import { formatToken } from './codes';
-import { fanfare } from './confetti';
-import { byId, esc, find } from './dom';
-import { svgOf } from './glyphs';
-import { buildPuzzle, plateOrder, type Puzzle } from './puzzle';
-import { restrictionFor } from './restrictions';
-import { armCheck, cancelCheck, firstOpen, S, save } from './state';
+import { fanfare } from '../confetti';
+import { byId, find } from '../dom';
+import { svgOf } from '../glyphs';
+import { restrictionIcon } from '../icons';
+import { buildPuzzle, plateOrder, type Puzzle } from '../puzzle';
+import { RESTRICTIONS } from '../restrictions';
+import { puzzleKey, restrictionIndex, type RoomSnapshot } from '../roomLogic';
+import { armCheck, cancelCheck, firstOpen, restoreDraft, S, saveDraft } from '../state';
 
-function tokenOf(): string {
-  return formatToken(S.code, S.count);
+export interface BoardContext {
+  puzzle: Puzzle;
+  seat: number;
+  roundId: number;
 }
 
-export function render(): void {
-  const seated = S.seat != null && S.code.length > 0;
-  const playing = seated && S.ready;
-
-  byId('lobbyView').hidden = seated;
-  byId('briefView').hidden = !(seated && !S.ready);
-  byId('playView').hidden = !playing;
-  byId('dealTag').hidden = !seated;
-  byId('tagline').hidden = seated;
-
-  if (playing) renderPlay();
-  else if (seated) renderBrief();
-  else renderLobby();
-
-  save();
+export function boardContext(room: RoomSnapshot, uid: string): BoardContext {
+  return {
+    puzzle: buildPuzzle(puzzleKey(room.code, room.meta.roundId), room.meta.playerCount),
+    seat: room.seats[uid] ?? 0,
+    roundId: room.meta.roundId,
+  };
 }
 
-export function renderLobby(): void {
-  let html = '';
-  for (let i = 0; i < S.count; i++) {
-    html +=
-      '<button class="seat" data-seat="' + i + '" aria-label="Take seat ' + (i + 1) + '">' +
-      '<span class="n">Seat</span><span class="num">' + (i + 1) + '</span></button>';
-  }
-  byId('seatGrid').innerHTML = html;
-}
+export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void): void {
+  const { puzzle: P, seat, roundId } = boardContext(room, uid);
+  const ri = restrictionIndex(seat, roundId);
 
-function renderBrief(): void {
-  const r = restrictionFor(S.seat!);
-  byId('dealTag').innerHTML = '<b>' + esc(tokenOf()) + '</b> &#xB7; seat ' + (S.seat! + 1);
-  byId('briefTitle').textContent = r.t;
-  byId('briefDesc').textContent = r.d;
-}
-
-function renderPlay(): void {
-  const P = buildPuzzle(S.code, S.count);
-  const seat = S.seat!;
-  const r = restrictionFor(seat);
-
-  byId('dealTag').hidden = false;
-  byId('dealTag').innerHTML = '<b>' + esc(tokenOf()) + '</b> &#xB7; seat ' + (seat + 1);
-  byId('restrictTitle').textContent = r.t;
-  byId('restrictDesc').textContent = r.d;
+  byId('roomTag').textContent = room.code;
+  byId('restrictIcon').innerHTML = restrictionIcon(ri);
+  byId('restrictIcon').setAttribute('title', RESTRICTIONS[ri]!.t);
 
   const holds: number[] = [];
   for (let i = 0; i < P.slots; i++) {
@@ -64,9 +39,9 @@ function renderPlay(): void {
   if (fresh) {
     S.builtFor = stamp;
     S.plate = plateOrder(P, seat);
+    S.draft = restoreDraft(stamp) ?? [];
   }
   if (S.draft.length !== P.slots) {
-    // every real re-deal clears the draft itself; this catches a reload
     S.draft = new Array(P.slots).fill(null);
   }
 
@@ -113,6 +88,8 @@ function renderPlay(): void {
     el.innerHTML = svgOf(parseInt(el.dataset.glyph!, 10));
   });
 
+  saveDraft(stamp);
+
   // any change to the sequence stops a running check and drops the last result
   const sig = S.draft.join(',');
   if (sig !== S.lastSig) {
@@ -122,10 +99,10 @@ function renderPlay(): void {
   }
   const full = !S.draft.some((g) => g == null);
   if (full && !S.graded) {
-    armCheck((left) => {
+    armCheck(P.answer, (left) => {
       const n = find('cdNum');
       if (n) n.textContent = String(left);
-    }, render);
+    }, rerender);
   } else if (!full) {
     cancelCheck();
   }
@@ -166,10 +143,9 @@ function renderVerdict(P: Puzzle): void {
 
   host.innerHTML = S.graded!.won
     ? '<div class="verdict win"><h3>That is the squiggle!</h3>' +
-      '<p>When everyone sees this, the whole table got there.</p>' +
       '<div class="answerrow">' +
       P.answer.map((g, i) => '<div style="animation-delay:' + i * 60 + 'ms">' + svgOf(g) + '</div>').join('') +
       '</div>' +
-      '<div class="btnrow"><button class="btn primary" data-act="newround">New round</button></div></div>'
+      '<div class="btnrow"><button class="btn primary" data-act="newround">Next round</button></div></div>'
     : '<div class="verdict miss"><h3>Not the sequence.</h3></div>';
 }

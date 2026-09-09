@@ -1,0 +1,78 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "rooms": {
+      "$code": {
+        "meta": {
+          ".read": "auth != null",
+          ".write": "auth != null && (!data.exists() || data.child('hostUid').val() === auth.uid || !data.child('lastActive').exists() || data.child('lastActive').val() < now - 86400000)",
+          ".validate": "newData.hasChildren(['hostUid', 'status', 'roundId', 'lastActive'])",
+
+          "hostUid": {
+            ".write": "auth != null && newData.val() === auth.uid && (!data.exists() || data.val() === auth.uid || !root.child('rooms').child($code).child('online').child(data.val()).exists())",
+            ".validate": "newData.isString()"
+          },
+          "lastActive": {
+            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists()",
+            ".validate": "newData.isNumber()"
+          },
+          "status": {
+            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists() && data.val() === 'playing' && newData.val() === 'won'",
+            ".validate": "newData.val().matches(/^(lobby|briefing|playing|won)$/)"
+          },
+          "roundId": { ".validate": "newData.isNumber() && newData.val() > 0" },
+          "playerCount": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 8" },
+          "createdAt": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        },
+
+        "players": {
+          ".read": "auth != null && data.child(auth.uid).exists()",
+          ".write": "auth != null && !newData.exists() && root.child('rooms').child($code).child('meta').child('hostUid').val() === auth.uid",
+
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "!newData.exists() || newData.hasChildren(['name'])",
+            "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 24" },
+            "joinedAt": { ".validate": "newData.isNumber()" },
+            "ready": { ".validate": "newData.isNumber()" },
+            "briefed": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        "seats": {
+          ".read": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists()",
+          ".write": "auth != null && root.child('rooms').child($code).child('meta').child('hostUid').val() === auth.uid",
+          "$uid": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 7" }
+        },
+
+        "online": {
+          ".read": "auth != null",
+          ".write": "auth != null && !newData.exists() && root.child('rooms').child($code).child('meta').child('hostUid').val() === auth.uid",
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "!newData.exists() || newData.val() === true"
+          }
+        },
+
+        "live": {
+          ".read": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists()",
+          ".write": "auth != null && !newData.exists() && root.child('rooms').child($code).child('meta').child('hostUid').val() === auth.uid",
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "!newData.exists() || newData.hasChildren(['holding'])",
+            "holding": { ".validate": "newData.isBoolean()" },
+            "correct": { ".validate": "newData.isBoolean()" },
+            "heldSince": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

@@ -1,19 +1,14 @@
-import { buildPuzzle } from './puzzle';
-
 export interface Verdict {
   won: boolean;
 }
 
-export interface GameState {
-  code: string;
-  count: number;
-  seat: number | null;
+/** Board state for the round in front of you. Everything shared lives in the room. */
+export interface BoardState {
   draft: (number | null)[];
   sel: number;
   plate: number[];
   /** `seed:seat` of the deal the plate was built for; a mismatch means re-deal. */
   builtFor: string;
-  ready: boolean;
   pinned: Record<number, boolean>;
   pinnedGlyph: Record<number, boolean>;
   checking: boolean;
@@ -22,15 +17,11 @@ export interface GameState {
   lastSig: string | null;
 }
 
-export const S: GameState = {
-  code: '',
-  count: 4,
-  seat: null,
+export const S: BoardState = {
   draft: [],
   sel: 0,
   plate: [],
   builtFor: '',
-  ready: false,
   pinned: {},
   pinnedGlyph: {},
   checking: false,
@@ -39,33 +30,37 @@ export const S: GameState = {
   lastSig: null,
 };
 
-const STORAGE_KEY = 'us_state';
+export function resetBoard(): void {
+  cancelCheck();
+  S.draft = [];
+  S.sel = 0;
+  S.plate = [];
+  S.builtFor = '';
+  S.pinned = {};
+  S.pinnedGlyph = {};
+  S.graded = null;
+  S.lastSig = null;
+}
 
-export function save(): void {
+const DRAFT_KEY = 'bs_draft';
+
+/** Keeps a half-built sequence across a refresh, but only for the deal it belongs to. */
+export function saveDraft(key: string): void {
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ code: S.code, count: S.count, seat: S.seat, ready: S.ready, draft: S.draft }),
-    );
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ key, draft: S.draft }));
   } catch {
-    /* private browsing, blocked storage — the game still plays */
+    /* storage blocked — the draft just will not survive a refresh */
   }
 }
 
-export function restore(): void {
+export function restoreDraft(key: string): (number | null)[] | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
     const v = JSON.parse(raw);
-    if (v && typeof v === 'object') {
-      S.code = String(v.code || '');
-      S.count = parseInt(v.count, 10) || 4;
-      S.seat = v.seat == null ? null : parseInt(v.seat, 10);
-      S.ready = !!v.ready;
-      S.draft = Array.isArray(v.draft) ? v.draft : [];
-    }
+    return v?.key === key && Array.isArray(v.draft) ? v.draft : null;
   } catch {
-    /* corrupt payload — fall back to a fresh state */
+    return null;
   }
 }
 
@@ -105,7 +100,8 @@ export function cancelCheck(): void {
   S.checking = false;
 }
 
-export function armCheck(onTick: (left: number) => void, onDone: () => void): void {
+/** Phase 2 replaces this with the hold every player has to press together. */
+export function armCheck(answer: number[], onTick: (left: number) => void, onDone: () => void): void {
   if (S.checking) return;
   S.checking = true;
   S.left = Math.round(CHECK_MS / 1000);
@@ -121,10 +117,9 @@ export function armCheck(onTick: (left: number) => void, onDone: () => void): vo
 
   cdTimer = setTimeout(() => {
     cancelCheck();
-    const p = buildPuzzle(S.code, S.count);
     let won = true;
-    for (let i = 0; i < p.slots; i++) {
-      if (S.draft[i] !== p.answer[i]) {
+    for (let i = 0; i < answer.length; i++) {
+      if (S.draft[i] !== answer[i]) {
         won = false;
         break;
       }

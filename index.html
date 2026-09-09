@@ -19,55 +19,68 @@
       <h1>Big Squiggle</h1>
       <p id="tagline">Everyone holds part of a sequence of shapes that nobody can easily describe, and all of you have to enter the whole thing.</p>
     </div>
-    <div class="roomtag" id="dealTag" hidden></div>
+    <div class="roomtag" id="roomTag" hidden></div>
   </header>
 
-  <!-- ================= LOBBY ================= -->
-  <section id="lobbyView">
-    <div class="houserule">
-      <div class="t">No chat or outside communication.</div>
-      <div class="d">Follow your given restriction on the call.</div>
-    </div>
-    <div class="dealrow">
+  <!-- ================= HOME ================= -->
+  <section id="homeView" hidden>
+    <div class="home">
       <div class="field">
-        <label for="codeInput">Game code</label>
-        <div class="codewrap">
-          <input type="text" id="codeInput" spellcheck="false" autocomplete="off" maxlength="16">
-          <button class="btn ghost" id="rollBtn">Roll</button>
-          <button class="btn ghost" id="copyBtn">Copy</button>
-        </div>
+        <label for="nameInput">Name</label>
+        <input type="text" id="nameInput" maxlength="24" autocomplete="nickname" spellcheck="false">
       </div>
-      <div class="field" style="max-width:118px">
-        <label for="countInput">Players</label>
-        <input type="number" id="countInput" min="2" max="8" value="4">
+
+      <button class="btn primary wide" id="createBtn">Create</button>
+
+      <div class="rule"><span>or</span></div>
+
+      <div class="codewrap">
+        <input type="text" id="joinCode" maxlength="12" placeholder="CODE" spellcheck="false" autocomplete="off" aria-label="Game code">
+        <button class="btn" id="joinBtn">Join</button>
       </div>
+
+      <p class="err" id="homeErr" hidden></p>
+      <p class="hint" id="connecting" hidden>Connecting…</p>
     </div>
-    <div class="seatgrid" id="seatGrid"></div>
+  </section>
+
+  <!-- ================= LOBBY ================= -->
+  <section id="lobbyView" hidden>
+    <button class="roomcode" id="roomCode" title="Copy invite link"></button>
+
+    <div class="roster" id="roster"></div>
+
+    <div class="btnrow" id="lobbyControls">
+      <button class="btn" id="readyBtn">Ready?</button>
+      <button class="btn primary" id="startBtn" hidden>Start</button>
+    </div>
+
+    <p class="hint" id="lobbyHint" hidden></p>
+    <p class="hint" id="waiting" hidden>Round in progress.</p>
+
+    <div class="btnrow">
+      <button class="btn ghost" id="resumeBtn" hidden>End round</button>
+      <button class="btn ghost" id="leaveRoomBtn">Leave</button>
+    </div>
+
+    <p class="houserule-min">No chat or outside communication.</p>
   </section>
 
   <!-- ================= BRIEFING ================= -->
   <section id="briefView" hidden>
     <div class="brief">
-      <div class="blabel">Your restriction</div>
-      <h2 class="btitle" id="briefTitle">Mic off</h2>
+      <div class="ricon big" id="briefIcon"></div>
+      <h2 class="btitle" id="briefTitle"></h2>
       <p class="bdesc" id="briefDesc"></p>
-      <p class="bnote">Set it up now. Press start once you are ready, and hold it until the round ends.</p>
-      <p class="bnote">Close any chat panels or apps.</p>
-      <div class="btnrow">
-        <button class="btn primary" id="startBtn">Start</button>
-        <button class="btn ghost" id="backBtn">Different seat</button>
-      </div>
+      <button class="btn primary wide" id="briefReadyBtn">Ready</button>
+      <div class="pips" id="briefPips"></div>
     </div>
   </section>
 
   <!-- ================= PLAY ================= -->
   <section id="playView" hidden>
     <div class="restrictbar">
-      <div>
-        <div class="rt" id="restrictTitle">Camera off</div>
-        <div class="rd" id="restrictDesc"></div>
-      </div>
-      <button class="btn ghost" id="leaveBtn">Change seat</button>
+      <div class="ricon" id="restrictIcon"></div>
     </div>
 
     <div class="slots" id="slots"></div>

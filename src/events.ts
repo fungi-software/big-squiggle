@@ -1,8 +1,8 @@
-import { formatToken, parseToken, randomCode } from './codes';
 import { byId } from './dom';
-import { shareUrl } from './share';
-import { cancelCheck, firstOpen, place, S, save } from './state';
-import { render, renderLobby } from './ui';
+import { nextRound } from './room';
+import { isHost } from './roomLogic';
+import { firstOpen, place, resetBoard, S } from './state';
+import { getRoom, getUid } from './store';
 
 type DragSource = { kind: 'glyph'; value: number } | { kind: 'slot'; value: number };
 
@@ -16,101 +16,7 @@ function clearHot(): void {
   }
 }
 
-function tokenOf(): string {
-  return formatToken(S.code, S.count);
-}
-
-function resetDeal(): void {
-  S.draft = [];
-  S.builtFor = '';
-}
-
-function flash(btn: HTMLElement, msg: string): void {
-  if (btn.dataset.busy) return;
-  btn.dataset.busy = '1';
-  const was = btn.textContent;
-  btn.textContent = msg;
-  setTimeout(() => {
-    btn.textContent = was;
-    delete btn.dataset.busy;
-  }, 1500);
-}
-
-export function mount(): void {
-  const codeInput = byId<HTMLInputElement>('codeInput');
-  const countInput = byId<HTMLInputElement>('countInput');
-
-  codeInput.addEventListener('input', function () {
-    const t = parseToken(this.value);
-    S.code = t.word;
-    if (t.count) {
-      S.count = t.count;
-      countInput.value = String(t.count);
-    }
-    resetDeal();
-    renderLobby();
-    save();
-  });
-
-  // Show the count the code actually resolved to, so a half-typed token cannot mismatch unseen.
-  codeInput.addEventListener('blur', function () {
-    if (S.code) this.value = tokenOf();
-  });
-
-  countInput.addEventListener('input', function () {
-    S.count = Math.max(2, Math.min(8, parseInt(this.value, 10) || 4));
-    resetDeal();
-    codeInput.value = tokenOf();
-    renderLobby();
-    save();
-  });
-
-  byId('rollBtn').addEventListener('click', () => {
-    cancelCheck();
-    S.graded = null;
-    S.code = randomCode();
-    resetDeal();
-    codeInput.value = tokenOf();
-    save();
-  });
-
-  byId('copyBtn').addEventListener('click', function () {
-    const url = shareUrl();
-    const text = url ? 'Big Squiggle: ' + url + '  (game code ' + tokenOf() + ')' : tokenOf();
-    Promise.resolve()
-      .then(() => navigator.clipboard.writeText(text))
-      .then(() => flash(this, 'Copied'))
-      .catch(() => {
-        codeInput.select();
-        flash(this, 'Copy it');
-      });
-  });
-
-  byId('seatGrid').addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-seat]');
-    if (!b) return;
-    if (!S.code) {
-      S.code = randomCode();
-      codeInput.value = tokenOf();
-    }
-    S.seat = parseInt(b.dataset.seat!, 10);
-    S.ready = false;
-    cancelCheck();
-    S.graded = null;
-    resetDeal();
-    render();
-  });
-
-  byId('startBtn').addEventListener('click', () => {
-    S.ready = true;
-    render();
-  });
-  byId('backBtn').addEventListener('click', () => {
-    S.seat = null;
-    S.ready = false;
-    render();
-  });
-
+export function mountBoard(rerender: () => void): void {
   const slots = byId('slots');
   const glyphGrid = byId('glyphGrid');
 
@@ -121,7 +27,7 @@ export function mount(): void {
     if (S.pinned[i]) return;
     if (S.draft[i] != null && S.sel === i) S.draft[i] = null;
     else S.sel = i;
-    render();
+    rerender();
   });
 
   glyphGrid.addEventListener('click', (e) => {
@@ -129,7 +35,7 @@ export function mount(): void {
     if (!b) return;
     if (!place(S.sel, parseInt(b.dataset.glyph!, 10))) return;
     S.sel = firstOpen();
-    render();
+    rerender();
   });
 
   glyphGrid.addEventListener('dragstart', (e) => {
@@ -163,7 +69,7 @@ export function mount(): void {
     drag = null;
     clearHot();
     S.sel = firstOpen();
-    render();
+    rerender();
   });
 
   slots.addEventListener('dragstart', (e) => {
@@ -222,7 +128,7 @@ export function mount(): void {
       S.sel = firstOpen();
     }
     drag = null;
-    render();
+    rerender();
   });
 
   document.addEventListener('dragend', () => {
@@ -230,27 +136,14 @@ export function mount(): void {
     drag = null;
   });
 
-  byId('leaveBtn').addEventListener('click', () => {
-    cancelCheck();
-    S.graded = null;
-    S.seat = null;
-    S.ready = false;
-    resetDeal();
-    render();
-  });
-
   byId('verdictSlot').addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
-    if (!b) return;
-    if (b.dataset.act === 'newround') {
-      cancelCheck();
-      S.graded = null;
-      S.code = randomCode();
-      codeInput.value = S.code;
-      S.seat = null;
-      S.ready = false;
-      resetDeal();
-    }
-    render();
+    if (!b || b.dataset.act !== 'newround') return;
+    const room = getRoom();
+    const uid = getUid();
+    if (!room || !isHost(room, uid)) return;
+    resetBoard();
+    void nextRound(room);
+    rerender();
   });
 }
