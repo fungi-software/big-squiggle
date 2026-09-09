@@ -59,3 +59,6 @@ coordinate seats verbally, and "everyone won" is something the table confirms ou
 [`docs/PLAN.md`](docs/PLAN.md) lays out the move to Firebase-backed rooms and an
 in-app WebRTC call, so that setup, seat assignment, the restrictions themselves,
 and the moment the whole table wins are all handled by the app.
+[`docs/PHASE-1-2.md`](docs/PHASE-1-2.md) specifies the next two phases in full:
+rooms on the Firebase free tier, and a validation that only resolves while every
+player is holding it down.

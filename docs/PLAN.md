@@ -19,69 +19,25 @@ the app.
 
 ## Target architecture
 
-```
-┌─────────────── browser ───────────────┐
-│  UI (unchanged game surface)          │
-│  ├─ room store   ← Firestore listener │
-│  ├─ private deal ← Firestore listener │
-│  ├─ presence     ↔ RTDB + onDisconnect│
-│  └─ call         ↔ RTCPeerConnection  │
-│                     signaling ↔ RTDB  │
-└───────────────────────────────────────┘
-              │ callable fns
-┌─────────────▼─────────────────────────┐
-│ Cloud Functions                        │
-│  createRoom · joinRoom · startRound    │
-│  submitSequence (the only grader)      │
-│  (answers live in a collection no      │
-│   client rule ever grants read on)     │
-└────────────────────────────────────────┘
-```
+> **Superseded for Phases 1 and 2.** Choosing a client-derived puzzle over Cloud
+> Functions removed the reason to run Firestore alongside RTDB, so those phases are
+> Spark-tier only: anonymous Auth, Realtime Database, Hosting. The concrete build is in
+> [PHASE-1-2.md](PHASE-1-2.md); the sketch below is what we would build instead if
+> cheat-resistance ever outranks the zero-dollar constraint.
 
-**Firestore** for the durable, structured state a listener should reflect: rooms,
-players, rounds, per-player private deals, submissions.
-**Realtime Database** for the two things it is strictly better at: presence
-(`onDisconnect` is native and instant) and WebRTC signalling (high-churn, disposable,
-sub-100ms).
-**Cloud Functions** for anything a cheating client must not be able to do: dealing the
-puzzle, holding the answer, deciding a win.
+The server-authoritative version splits the game's state three ways: **Firestore** for
+rooms, players, rounds and per-player deals; **Realtime Database** for presence and
+WebRTC signalling; **Cloud Functions** for anything a cheating client must not be able to
+do — dealing the puzzle, holding the answer, deciding a win.
 
-### Data model
+The trick that makes it work is splitting `rounds/{id}/deals/{uid}`, readable only by
+that player and carrying just the positions they are given, from `answers/{roomId}_{roundId}`,
+which no client rule grants read on at all. A player subscribes to exactly the fragment
+they are supposed to hold, and the full sequence exists only where a Function can see it.
 
-```
-rooms/{roomId}
-  code: "RAVEN"            // human-shareable, indexed, recycled after 24h idle
-  hostUid, createdAt, status: lobby|briefing|playing|won
-  seatCount, roundId
-
-rooms/{roomId}/players/{uid}
-  displayName, seat, restriction: camera|mic|sound
-  ready: bool, joinedAt, lastSeen
-
-rooms/{roomId}/rounds/{roundId}
-  status, slots, plate: [glyphId]      // public: the shared tile plate
-  startedAt, solvedAt
-  progress: { uid: "locked"|"open" }   // count only — never the sequences
-
-rooms/{roomId}/rounds/{roundId}/deals/{uid}      // rules: read only if uid == auth.uid
-  pinned: { slotIndex: glyphId }       // the positions this player is given
-  plateOrder: [glyphId]
-
-answers/{roomId}_{roundId}             // rules: no client read, no client write
-  answer: [glyphId]
-```
-
-Splitting `deals/{uid}` from `answers/*` is the whole trick: a player can subscribe to
-exactly the fragment they are supposed to hold, and the full sequence exists only where
-a Function can see it.
-
-### Security rules, in one line each
-
-- A player reads a room only while they hold a `players/{uid}` doc in it.
-- A player reads only their own `deals/{uid}`.
-- Nobody reads `answers/*`. Ever. Functions use the Admin SDK.
-- Clients never write `rounds/*` or `progress` — only Functions do, via `submitSequence`.
-- Seat claims go through `joinRoom`, so a transaction — not two clients racing on a write.
+That upgrade costs a Blaze plan (a card on file, though the 2M free invocations/month
+means a game like this bills nothing) and closes both holes at once: the answer leaves
+the browser, and per-player correctness stops being public.
 
 ## Fixing the three frictions
 
@@ -131,17 +87,24 @@ a restriction that starts mid-round, one that rotates every 60 seconds, or an
 asymmetric one ("you can hear seat 2 only").
 
 **The one thing Firebase does not give us is TURN.** Roughly 10–15% of participants sit
-behind NATs that need a relay, and without one those players silently fail to connect.
-Options, in the order I would try them:
+behind NATs that need a relay, and without one those players silently fail to connect —
+no error, no message, just a black tile. It is not optional, but it is free:
 
-1. **Cloudflare Calls / Twilio Network Traversal** — managed TURN credentials fetched
-   from a Function that keeps the secret server-side. ~$0.40–0.60/GB relayed, and only
-   the minority of connections relay.
-2. **Self-hosted coturn** on a small VM — a few dollars a month, more ops.
-3. **Skip mesh entirely for larger tables** — an SFU (LiveKit Cloud, Daily) includes
-   TURN, drops the upstream cost from N-1 streams to 1, and gives per-track server-side
-   mute that makes restrictions tamper-proof rather than merely app-enforced. Worth it
-   above ~6 players; overkill below.
+1. **Cloudflare Realtime TURN** — 1,000 GB of free allowance before any charge, then
+   $0.05/GB, and only relayed connections consume it. A twenty-minute five-player round
+   with one relayed player is well under a gigabyte. Credentials are short-lived tokens
+   minted server-side.
+2. **Self-hosted coturn on Oracle Always Free** — 10 TB/month egress at genuinely zero
+   cost. Real $0 with real ops burden, and Oracle has been trimming the tier. The escape
+   hatch, not the starting point.
+3. **An SFU** (Cloudflare Realtime, LiveKit, Daily) bundles TURN — with every peer
+   connecting to the media server anyway, the NAT problem disappears as a side effect.
+
+Cloudflare's TURN is free of charge when paired with their SFU, and traffic between the
+two is not billed at all. That collapses the mesh-vs-SFU decision from architectural to a
+config flag: same vendor, same allowance, so build mesh first and switch if table sizes
+grow. Cheapest on the allowance is mesh (only the ~10–15% who relay consume it); kindest
+to a laptop is the SFU (one upstream instead of seven).
 
 Mesh above 6 players is where this gets uncomfortable — 7 outbound video encodes on a
 laptop. If we want 8-player tables to feel good, plan on the SFU from the start of
@@ -156,15 +119,15 @@ the project secrets exist. No behaviour changed: `tests/golden.json` pins the de
 the plate order and the rendered SVG against fixtures captured from the pre-refactor
 build, so a future refactor cannot silently change what a game code deals.
 
-**Phase 1 — Rooms.** Anonymous auth, `createRoom` / `joinRoom`, presence, live roster,
-share link, host-controlled start. The puzzle is still derived client-side from the room
-id, so nothing about grading changes yet. Ship this alone and setup friction is already
-gone.
+**Phase 1 — Rooms.** Anonymous auth, create/join by code, presence, live roster, named
+players, host-controlled start, and server-assigned seats. The puzzle stays client-derived.
+Ship this alone and setup friction is already gone.
 
-**Phase 2 — Server-authoritative rounds.** Move the deal into `startRound`, add
-`deals/{uid}` and `answers/*`, replace local grading with `submitSequence`, add the
-live lock-in counter and the synchronized win. This is the phase that fixes the actual
-game.
+**Phase 2 — Shared validation.** The five-second per-device check is replaced by a
+hold-to-validate that only resolves while every player is holding, with an anonymous
+indicator of how many are down. This is the phase that fixes the actual game.
+
+Both are specified in full in [PHASE-1-2.md](PHASE-1-2.md).
 
 **Phase 3 — The call.** Mesh WebRTC with RTDB signalling, TURN credentials from a
 Function, restrictions applied at the track level, a video strip in the play view,
@@ -186,8 +149,8 @@ TURN relay, and only for the connections that need it.
 
 Risks worth naming now:
 
-- **TURN is not optional.** Budget for it in Phase 3 or a fraction of players get a
-  black screen with no explanation.
+- **TURN is not optional**, though it is free at this scale. Wire it in Phase 3 or a
+  fraction of players get a black screen with no explanation.
 - **Mesh scaling.** See above — 8-player mesh video is rough.
 - **Anonymous auth and reconnects.** A refresh must return you to your seat, not spawn a
   ghost player. Persist the anon uid and make `joinRoom` idempotent on it.
