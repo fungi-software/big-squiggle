@@ -54,6 +54,18 @@ describe.skipIf(!EMULATOR)('database rules', () => {
     (uid ? env.authenticatedContext(uid) : env.unauthenticatedContext()).database();
 
   describe('lookup and membership', () => {
+    it('lets a member read the whole room node, which is what the app subscribes to', async () => {
+      // read permission does not cascade upward: without a rule here the listener is
+      // denied and the app hangs with no error at all
+      await assertSucceeds(get(ref(as(GUEST), 'rooms/RAVEN')));
+      await assertFails(get(ref(as(OUTSIDER), 'rooms/RAVEN')));
+    });
+
+    it('lets anyone read their own player row, so a joiner can tell if they are already in', async () => {
+      await assertSucceeds(get(ref(as(OUTSIDER), `rooms/RAVEN/players/${OUTSIDER}`)));
+      await assertFails(get(ref(as(OUTSIDER), `rooms/RAVEN/players/${GUEST}`)));
+    });
+
     it('lets any signed-in user read meta, so a room can be found before joining', async () => {
       await assertSucceeds(get(ref(as(OUTSIDER), 'rooms/RAVEN/meta')));
     });

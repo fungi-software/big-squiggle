@@ -22,6 +22,7 @@ export function render(): void {
     byId(id).hidden = name !== screen;
   }
   byId('tagline').hidden = screen !== 'home';
+  byId('roomTag').hidden = screen !== 'play';
 
   if (screen === 'home') renderHome(!!uid);
   else if (screen === 'lobby') renderLobby(room!, uid!);

@@ -1,7 +1,7 @@
 import { byId } from '../dom';
 import { createRoom, joinRoom, normalizeCode, RoomError } from '../room';
 import { rememberedName, rememberName } from '../session';
-import { enterRoom, getUid } from '../store';
+import { enterRoom, getRoom, getUid } from '../store';
 
 const MESSAGES: Record<string, string> = {
   'not-found': 'No room with that code.',
@@ -19,8 +19,9 @@ function setError(message: string): void {
 }
 
 async function attempt(run: (uid: string, name: string) => Promise<string>): Promise<void> {
+  // a second create while already seated would strand the first room without its host
   const uid = getUid();
-  if (!uid || busy) return;
+  if (!uid || busy || getRoom()) return;
 
   const field = byId<HTMLInputElement>('nameInput');
   const name = field.value.trim();

@@ -74,6 +74,8 @@ deaf and who is mute between rounds.
     ".write": false,
     "rooms": {
       "$code": {
+        ".read": "auth != null && data.child('players').child(auth.uid).exists()",
+
         "meta": {
           ".read": "auth != null",
           ".write": "auth != null && (!data.exists()
@@ -86,6 +88,7 @@ deaf and who is mute between rounds.
         "players": {
           ".read": "auth != null && data.child(auth.uid).exists()",
           "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
             ".write": "auth != null && auth.uid === $uid",
             ".validate": "newData.hasChildren(['name','joinedAt'])",
             "name": { ".validate": "newData.isString() && newData.val().length <= 24" }
@@ -113,6 +116,12 @@ deaf and who is mute between rounds.
 `meta` is world-readable to signed-in users on purpose: you have to be able to look a
 room up before you are a member of it. Everything with a player's name or state in it
 requires membership.
+
+The `.read` on `$code` itself is not redundant with the child rules. **RTDB read
+permission does not cascade upward**: the app subscribes to the whole room node, and
+granting reads only on `meta`, `players` and the rest denies that listener outright — the
+screen simply never fills, with no error anywhere. The matching `.read` on `players/$uid`
+is what lets someone check whether they are already in a room they have not joined.
 
 **Rules cannot count children**, so the 2–8 player cap is client-side only. A person who
 knows your code can flood the room. Accepted for a party game; a `playerCount`

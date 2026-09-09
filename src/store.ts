@@ -36,6 +36,9 @@ export function enterRoom(code: string): void {
     room = next;
     if (next) react(next);
     notify();
+  }, () => {
+    exitRoom();
+    notify();
   });
 }
 

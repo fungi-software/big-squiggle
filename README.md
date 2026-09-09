@@ -25,15 +25,29 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-Other scripts: `npm run build` (production bundle into `dist/`), `npm run preview`,
-`npm run typecheck`, `npm test`.
+With no `.env.local` the app points at the Firebase emulator suite (`npm run emulators`,
+which needs a JVM). To run against the real project instead, copy `.env.example` to
+`.env.local` and fill it from the Firebase console — those values are not secrets, and
+`database.rules.json` is what actually protects the data.
+
+Other scripts: `npm run build`, `npm run preview`, `npm run typecheck`, `npm test`,
+and `npm run test:rules` (security rules, against the emulator).
+
+Deploying rules: `npx firebase deploy --only database`.
 
 ## Layout
 
 ```
 index.html          markup only; the page shell
 src/
-  main.ts           boot: restore state, wire events, first render
+  main.ts           boot: sign in, rejoin, wire events, first render
+  firebase.ts       app init, anonymous auth, emulator wiring
+  room.ts           create / join / start / leave — thin wrappers over roomLogic
+  roomLogic.ts      pure room rules: seating, readiness, host succession, routing
+  presence.ts       onDisconnect presence and the server clock offset
+  store.ts          the live room snapshot and the transitions nobody presses
+  render.ts         picks a screen from room status
+  views/            home, lobby, brief, play
   glyphs.ts         the 50 marks and their SVG
   puzzle.ts         the seeded deal — answer, plate, seat ownership
   random.ts         mulberry32 and friends
@@ -47,6 +61,8 @@ src/
 tests/
   puzzle.test.ts    invariants, plus golden fixtures captured from the
   golden.json       pre-refactor build so the deal can never silently drift
+  roomLogic.test.ts the room rules, without needing a database
+  rules.test.ts     security rules; runs under `npm run test:rules`
 ```
 
 Deploys to Firebase Hosting from `main` once `FIREBASE_SERVICE_ACCOUNT` and

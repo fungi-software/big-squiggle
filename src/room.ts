@@ -25,21 +25,34 @@ export function normalizeCode(raw: string): string {
   return raw.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 12);
 }
 
-export function subscribeRoom(code: string, cb: (room: RoomSnapshot | null) => void): Unsubscribe {
-  return onValue(roomRef(code), (snap) => {
-    const v = snap.val();
-    if (!v?.meta) {
+export function subscribeRoom(
+  code: string,
+  cb: (room: RoomSnapshot | null) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  return onValue(
+    roomRef(code),
+    (snap) => {
+      const v = snap.val();
+      if (!v?.meta) {
+        cb(null);
+        return;
+      }
+      cb({
+        code,
+        meta: v.meta as RoomMeta,
+        players: v.players ?? {},
+        seats: v.seats ?? {},
+        online: v.online ?? {},
+      });
+    },
+    // a denied read reports here and nowhere else; without this the screen just never fills
+    (err) => {
+      console.error('room subscription failed', err);
+      onError?.(err);
       cb(null);
-      return;
-    }
-    cb({
-      code,
-      meta: v.meta as RoomMeta,
-      players: v.players ?? {},
-      seats: v.seats ?? {},
-      online: v.online ?? {},
-    });
-  });
+    },
+  );
 }
 
 /**
@@ -71,16 +84,24 @@ export async function createRoom(uid: string, name: string): Promise<string> {
   throw new RoomError('no-code');
 }
 
+/**
+ * Reads only what a non-member is allowed to: the room's meta, their own player row,
+ * and the presence list. Fetching the whole room here would be denied.
+ */
 export async function joinRoom(code: string, uid: string, name: string): Promise<void> {
-  const snap = await get(roomRef(code));
-  const v = snap.val();
-  if (!v?.meta) throw new RoomError('not-found');
+  const [metaSnap, mineSnap, onlineSnap] = await Promise.all([
+    get(roomRef(code, '/meta')),
+    get(roomRef(code, `/players/${uid}`)),
+    get(roomRef(code, '/online')),
+  ]);
 
-  const alreadyIn = !!v.players?.[uid];
+  const meta = metaSnap.val() as RoomMeta | null;
+  if (!meta) throw new RoomError('not-found');
+
+  const alreadyIn = mineSnap.exists();
   if (!alreadyIn) {
-    if (v.meta.status !== 'lobby') throw new RoomError('in-progress');
-    const present = Object.keys(v.online ?? {}).length;
-    if (present >= MAX_PLAYERS) throw new RoomError('full');
+    if (meta.status !== 'lobby') throw new RoomError('in-progress');
+    if (Object.keys(onlineSnap.val() ?? {}).length >= MAX_PLAYERS) throw new RoomError('full');
   }
   await addPlayer(code, uid, name, alreadyIn);
 }

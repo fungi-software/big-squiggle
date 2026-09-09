@@ -208,4 +208,6 @@ input:focus,select:focus{outline:2.5px solid var(--accent);outline-offset:1px;bo
 .ricon svg{width:26px;height:26px}
 .ricon.big svg{width:76px;height:76px;stroke-width:1.4}
 .brief{align-items:center;text-align:center;gap:14px}
-.restrictbar{justify-content:center;padding:10px 18px;border-left:none;border-top:3px solid var(--warn)}
+.restrictbar{align-self:center;display:inline-flex;width:auto;justify-content:center;
+  padding:8px 16px;border:1px solid var(--line);border-left:none;border-top:3px solid var(--warn);
+  border-radius:0 0 12px 12px}
