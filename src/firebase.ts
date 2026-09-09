@@ -10,6 +10,12 @@ const env = import.meta.env;
  */
 export const USE_EMULATOR = env.VITE_USE_EMULATOR === 'true' || !env.VITE_FB_API_KEY;
 
+// A production bundle pointed at localhost is a silently broken deploy: it looks fine
+// until every player sees a dead Connecting… screen. Fail where someone will notice.
+if (import.meta.env.PROD && USE_EMULATOR && env.VITE_USE_EMULATOR !== 'true') {
+  throw new Error('production build has no Firebase config — check .env.production');
+}
+
 const projectId = env.VITE_FB_PROJECT_ID ?? 'demo-big-squiggle';
 
 const app = initializeApp({

@@ -1,7 +1,3 @@
-export interface Verdict {
-  won: boolean;
-}
-
 /** Board state for the round in front of you. Everything shared lives in the room. */
 export interface BoardState {
   draft: (number | null)[];
@@ -11,10 +7,6 @@ export interface BoardState {
   builtFor: string;
   pinned: Record<number, boolean>;
   pinnedGlyph: Record<number, boolean>;
-  checking: boolean;
-  graded: Verdict | null;
-  left: number;
-  lastSig: string | null;
 }
 
 export const S: BoardState = {
@@ -24,22 +16,15 @@ export const S: BoardState = {
   builtFor: '',
   pinned: {},
   pinnedGlyph: {},
-  checking: false,
-  graded: null,
-  left: 5,
-  lastSig: null,
 };
 
 export function resetBoard(): void {
-  cancelCheck();
   S.draft = [];
   S.sel = 0;
   S.plate = [];
   S.builtFor = '';
   S.pinned = {};
   S.pinnedGlyph = {};
-  S.graded = null;
-  S.lastSig = null;
 }
 
 const DRAFT_KEY = 'bs_draft';
@@ -81,50 +66,4 @@ export function place(i: number, g: number): boolean {
   if (at >= 0 && at !== i && !S.pinned[at]) S.draft[at] = null;
   S.draft[i] = g;
   return true;
-}
-
-export const CHECK_MS = 5000;
-
-let cdTimer: ReturnType<typeof setTimeout> | null = null;
-let cdTick: ReturnType<typeof setInterval> | null = null;
-
-export function cancelCheck(): void {
-  if (cdTimer) {
-    clearTimeout(cdTimer);
-    cdTimer = null;
-  }
-  if (cdTick) {
-    clearInterval(cdTick);
-    cdTick = null;
-  }
-  S.checking = false;
-}
-
-/** Phase 2 replaces this with the hold every player has to press together. */
-export function armCheck(answer: number[], onTick: (left: number) => void, onDone: () => void): void {
-  if (S.checking) return;
-  S.checking = true;
-  S.left = Math.round(CHECK_MS / 1000);
-
-  cdTick = setInterval(() => {
-    S.left--;
-    onTick(Math.max(0, S.left));
-    if (S.left <= 0 && cdTick) {
-      clearInterval(cdTick);
-      cdTick = null;
-    }
-  }, 1000);
-
-  cdTimer = setTimeout(() => {
-    cancelCheck();
-    let won = true;
-    for (let i = 0; i < answer.length; i++) {
-      if (S.draft[i] !== answer[i]) {
-        won = false;
-        break;
-      }
-    }
-    S.graded = { won };
-    onDone();
-  }, CHECK_MS);
 }

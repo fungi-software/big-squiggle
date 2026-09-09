@@ -6,8 +6,9 @@ on:
   pull_request:
 
 env:
-  # Empty until the Firebase project exists; the deploy step stays skipped until then.
-  FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+  # `firebase init hosting:github` writes the first name; the second is for a key added
+  # by hand. Until one exists the deploy step skips itself and the build stays green.
+  FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BIG_SQUIGGLE || secrets.FIREBASE_SERVICE_ACCOUNT }}
 
 jobs:
   build:
@@ -33,6 +34,6 @@ jobs:
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          firebaseServiceAccount: ${{ env.FIREBASE_SERVICE_ACCOUNT }}
           channelId: live
-          projectId: ${{ vars.FIREBASE_PROJECT_ID }}
+          projectId: big-squiggle

@@ -10,6 +10,10 @@ let room: RoomSnapshot | null = null;
 let unsubRoom: Unsubscribe | null = null;
 let unbindPresence: (() => void) | null = null;
 let notify: () => void = () => {};
+let hostWatch: ReturnType<typeof setTimeout> | null = null;
+
+/** A refresh drops presence for a moment; only a real departure should move the room. */
+const HOST_GRACE_MS = 6000;
 
 export function setUid(value: string): void {
   uid = value;
@@ -43,6 +47,10 @@ export function enterRoom(code: string): void {
 }
 
 export function exitRoom(): void {
+  if (hostWatch) {
+    clearTimeout(hostWatch);
+    hostWatch = null;
+  }
   unsubRoom?.();
   unbindPresence?.();
   unsubRoom = null;
@@ -58,10 +66,24 @@ export function exitRoom(): void {
 function react(next: RoomSnapshot): void {
   if (!uid) return;
 
-  if (nextHost(next) === uid && next.meta.hostUid !== uid) {
-    void claimHost(next, uid);
-    return;
+  const hostAway = nextHost(next) === uid && next.meta.hostUid !== uid;
+  if (hostAway) {
+    // wait out the grace period before taking over — a host who is merely reloading
+    // comes back within it, and the room should still be theirs when they do
+    if (!hostWatch) {
+      hostWatch = setTimeout(() => {
+        hostWatch = null;
+        const now = room;
+        if (now && uid && nextHost(now) === uid && now.meta.hostUid !== uid) {
+          void claimHost(now, uid);
+        }
+      }, HOST_GRACE_MS);
+    }
+  } else if (hostWatch) {
+    clearTimeout(hostWatch);
+    hostWatch = null;
   }
+
   if (isHost(next, uid) && next.meta.status === 'briefing' && allBriefed(next)) {
     void beginPlay(next.code);
   }

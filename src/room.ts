@@ -1,5 +1,5 @@
 import {
-  get, onValue, ref, remove, runTransaction, serverTimestamp, update,
+  get, onDisconnect, onValue, ref, remove, runTransaction, serverTimestamp, update,
   type Unsubscribe,
 } from 'firebase/database';
 
@@ -44,6 +44,7 @@ export function subscribeRoom(
         players: v.players ?? {},
         seats: v.seats ?? {},
         online: v.online ?? {},
+        live: v.live ?? {},
       });
     },
     // a denied read reports here and nowhere else; without this the screen just never fills
@@ -173,6 +174,24 @@ export async function claimHost(room: RoomSnapshot, uid: string): Promise<void> 
   const was = room.meta.hostUid;
   await runTransaction(roomRef(room.code, '/meta/hostUid'), (current: string | null) =>
     current === was ? uid : undefined,
+  );
+}
+
+export async function pressHold(code: string, uid: string, correct: boolean): Promise<void> {
+  const r = roomRef(code, `/live/${uid}`);
+  // clear it server-side too: a closed laptop must not keep holding the button down
+  void onDisconnect(r).remove();
+  await update(r, { holding: true, correct, heldSince: serverTimestamp() });
+}
+
+export function releaseHold(code: string, uid: string): Promise<void> {
+  return update(roomRef(code, `/live/${uid}`), { holding: false });
+}
+
+/** Whoever sees the win first records it; the guard makes the race between them harmless. */
+export async function declareWon(code: string): Promise<void> {
+  await runTransaction(roomRef(code, '/meta/status'), (current: string | null) =>
+    current === 'playing' ? 'won' : undefined,
   );
 }
 

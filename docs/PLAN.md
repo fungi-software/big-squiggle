@@ -119,11 +119,11 @@ the project secrets exist. No behaviour changed: `tests/golden.json` pins the de
 the plate order and the rendered SVG against fixtures captured from the pre-refactor
 build, so a future refactor cannot silently change what a game code deals.
 
-**Phase 1 — Rooms.** Anonymous auth, create/join by code, presence, live roster, named
+**Phase 1 — Rooms. _(done)_** Anonymous auth, create/join by code, presence, live roster, named
 players, host-controlled start, and server-assigned seats. The puzzle stays client-derived.
 Ship this alone and setup friction is already gone.
 
-**Phase 2 — Shared validation.** The five-second per-device check is replaced by a
+**Phase 2 — Shared validation. _(done)_** The five-second per-device check is replaced by a
 hold-to-validate that only resolves while every player is holding, with an anonymous
 indicator of how many are down. This is the phase that fixes the actual game.
 

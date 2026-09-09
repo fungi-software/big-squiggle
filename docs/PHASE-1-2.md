@@ -211,7 +211,7 @@ The current build explains itself in prose. It shouldn't. Target inventory:
 The pips are the whole indicator: one per player, lit when that player is down. Count
 without identity, legible without a label.
 
-## Phase 1 — rooms
+## Phase 1 — rooms _(shipped)_
 
 1. Firebase project, anonymous auth, RTDB, and the rules above; emulator wired into
    `npm run dev` so nothing during development touches the real project.
@@ -232,7 +232,7 @@ without identity, legible without a label.
 
 Ships: nobody types a matching token again. Grading is still the local five-second check.
 
-## Phase 2 — shared validation
+## Phase 2 — shared validation _(shipped)_
 
 1. `src/live.ts` — hold read/write, `onDisconnect`, and the `attempt()` predicate above.
 2. Replace the five-second auto-check in `state.ts` with the hold control. `CHECK_MS`,
@@ -270,3 +270,21 @@ Spark gives RTDB 100 simultaneous connections, 1 GB stored, and 10 GB/month down
 listener per player on a room object measured in kilobytes; a room's entire lifetime is
 a rounding error against 10 GB. The binding limit is 100 concurrent players across all
 games at once, which is a good problem.
+
+## What building it actually taught
+
+Three things the design above did not anticipate, all found by running two real players
+against the real database rather than by testing the logic:
+
+- **RTDB read permission does not cascade upward.** Granting reads on every child of a
+  room still denies a listener on the room node itself, and a denied `onValue` with no
+  error callback is indistinguishable from a room that never loads. Both the rule and the
+  error callback were missing.
+- **Never re-render from inside a render.** The winning attempt called `rerender()` from
+  within the render pass that detected it; the re-entrant pass painted the pre-win state
+  over the top, and the celebration only appeared after the next snapshot. The resolution
+  now updates its own frame and the win latches locally, so it does not wait on the
+  round trip that records it.
+- **Host succession needs a grace period.** A refresh drops presence for a second, which
+  was long enough for the other player to take the room. Succession now waits six
+  seconds and cancels if the host comes back.

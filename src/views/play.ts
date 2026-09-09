@@ -1,29 +1,42 @@
 import { fanfare } from '../confetti';
-import { byId, find } from '../dom';
+import { byId } from '../dom';
 import { svgOf } from '../glyphs';
 import { restrictionIcon } from '../icons';
+import { attempt } from '../live';
+import { serverNow } from '../presence';
 import { buildPuzzle, plateOrder, type Puzzle } from '../puzzle';
 import { RESTRICTIONS } from '../restrictions';
-import { puzzleKey, restrictionIndex, type RoomSnapshot } from '../roomLogic';
-import { armCheck, cancelCheck, firstOpen, restoreDraft, S, saveDraft } from '../state';
+import { declareWon } from '../room';
+import { isHost, puzzleKey, restrictionIndex, seatedUids, type RoomSnapshot } from '../roomLogic';
+import { firstOpen, restoreDraft, S, saveDraft } from '../state';
 
-export interface BoardContext {
-  puzzle: Puzzle;
-  seat: number;
-  roundId: number;
+/** The attempt already acted on, so a held button resolves once rather than every frame. */
+let settled: number | null = null;
+let missUntil = 0;
+let ticker: number | null = null;
+/** Celebrate on our own reading rather than waiting for the write to come back. */
+let localWon: number | null = null;
+
+function puzzleOf(room: RoomSnapshot): Puzzle {
+  return buildPuzzle(puzzleKey(room.code, room.meta.roundId), room.meta.playerCount);
 }
 
-export function boardContext(room: RoomSnapshot, uid: string): BoardContext {
-  return {
-    puzzle: buildPuzzle(puzzleKey(room.code, room.meta.roundId), room.meta.playerCount),
-    seat: room.seats[uid] ?? 0,
-    roundId: room.meta.roundId,
-  };
+/** Whether this player's own sequence matches — computed here, published as one bool. */
+export function isMine(room: RoomSnapshot): boolean {
+  const answer = puzzleOf(room).answer;
+  return answer.every((g, i) => S.draft[i] === g);
+}
+
+export function resetAttempt(): void {
+  settled = null;
+  missUntil = 0;
+  localWon = null;
 }
 
 export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void): void {
-  const { puzzle: P, seat, roundId } = boardContext(room, uid);
-  const ri = restrictionIndex(seat, roundId);
+  const P = puzzleOf(room);
+  const seat = room.seats[uid] ?? 0;
+  const ri = restrictionIndex(seat, room.meta.roundId);
 
   byId('roomTag').textContent = room.code;
   byId('restrictIcon').innerHTML = restrictionIcon(ri);
@@ -40,10 +53,9 @@ export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void
     S.builtFor = stamp;
     S.plate = plateOrder(P, seat);
     S.draft = restoreDraft(stamp) ?? [];
+    resetAttempt();
   }
-  if (S.draft.length !== P.slots) {
-    S.draft = new Array(P.slots).fill(null);
-  }
+  if (S.draft.length !== P.slots) S.draft = new Array(P.slots).fill(null);
 
   S.pinned = {};
   S.pinnedGlyph = {};
@@ -89,39 +101,75 @@ export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void
   });
 
   saveDraft(stamp);
-
-  // any change to the sequence stops a running check and drops the last result
-  const sig = S.draft.join(',');
-  if (sig !== S.lastSig) {
-    S.lastSig = sig;
-    cancelCheck();
-    S.graded = null;
-  }
-  const full = !S.draft.some((g) => g == null);
-  if (full && !S.graded) {
-    armCheck(P.answer, (left) => {
-      const n = find('cdNum');
-      if (n) n.textContent = String(left);
-    }, rerender);
-  } else if (!full) {
-    cancelCheck();
-  }
-
-  renderVerdict(P);
+  renderAttempt(room, rerender);
+  renderWin(room, uid, P);
 }
 
-function renderVerdict(P: Puzzle): void {
-  const host = byId('verdictSlot');
-  const mode = S.graded ? 'done:' + S.graded.won : S.checking ? 'checking' : 'idle';
-
-  if (host.dataset.mode === mode) {
-    // never restart the animation on a re-render
-    if (mode === 'checking') {
-      const n = find('cdNum');
-      if (n) n.textContent = String(Math.max(0, S.left));
-    }
+/**
+ * The meter, the pips, and the moment of truth. Runs on a frame loop while the table is
+ * charging, because progress is a function of time rather than of anything arriving.
+ */
+function renderAttempt(room: RoomSnapshot, rerender: () => void): void {
+  const over = room.meta.status === 'won' || localWon === room.meta.roundId;
+  byId('holdRow').hidden = over;
+  if (over) {
+    stopTicker();
     return;
   }
+
+  const seated = seatedUids(room);
+  const state = attempt(seated, room.live, serverNow());
+
+  // Act on a resolution, then paint this same frame with the result. Re-rendering from
+  // inside a render pass instead left the win screen unpainted until the next snapshot.
+  if (state.phase === 'resolved' && state.startedAt !== settled) {
+    settled = state.startedAt!;
+    if (state.won) {
+      localWon = room.meta.roundId;
+      void declareWon(room.code);
+      fanfare(byId<HTMLCanvasElement>('confetti'));
+      byId('holdRow').hidden = true;
+      stopTicker();
+      return;
+    }
+    missUntil = Date.now() + 700;
+  }
+
+  byId('holdPips').innerHTML = seated
+    .map((_, i) => `<i class="pip${i < state.down ? ' on' : ''}"></i>`)
+    .join('');
+
+  const pill = byId('holdBtn');
+  const spent = state.phase === 'resolved' && state.startedAt === settled;
+  byId('holdFill').style.transform = `scaleX(${spent ? 0 : state.progress})`;
+  pill.classList.toggle('charging', state.phase === 'charging');
+  pill.classList.toggle('miss', Date.now() < missUntil);
+
+  if (state.phase === 'charging' || Date.now() < missUntil) startTicker(rerender);
+  else stopTicker();
+}
+
+function startTicker(rerender: () => void): void {
+  if (ticker != null) return;
+  const step = () => {
+    ticker = null;
+    rerender();
+  };
+  ticker = requestAnimationFrame(step);
+}
+
+function stopTicker(): void {
+  if (ticker != null) {
+    cancelAnimationFrame(ticker);
+    ticker = null;
+  }
+}
+
+function renderWin(room: RoomSnapshot, uid: string, P: Puzzle): void {
+  const host = byId('verdictSlot');
+  const over = room.meta.status === 'won' || localWon === room.meta.roundId;
+  const mode = over ? 'won:' + room.meta.roundId : 'idle';
+  if (host.dataset.mode === mode) return;
   host.dataset.mode = mode;
 
   if (mode === 'idle') {
@@ -129,23 +177,13 @@ function renderVerdict(P: Puzzle): void {
     return;
   }
 
-  if (mode === 'checking') {
-    host.innerHTML =
-      '<div class="verdict checking">' +
-      '<div class="cdwrap"><svg class="cdring" viewBox="0 0 60 60" aria-hidden="true">' +
-      '<circle class="track" cx="30" cy="30" r="26"/><circle class="fill" cx="30" cy="30" r="26"/></svg>' +
-      '<div class="cdnum" id="cdNum">' + Math.max(0, S.left) + '</div></div>' +
-      '<h3>Checking your sequence</h3></div>';
-    return;
-  }
-
-  if (S.graded!.won) fanfare(byId<HTMLCanvasElement>('confetti'));
-
-  host.innerHTML = S.graded!.won
-    ? '<div class="verdict win"><h3>That is the squiggle!</h3>' +
-      '<div class="answerrow">' +
-      P.answer.map((g, i) => '<div style="animation-delay:' + i * 60 + 'ms">' + svgOf(g) + '</div>').join('') +
-      '</div>' +
-      '<div class="btnrow"><button class="btn primary" data-act="newround">Next round</button></div></div>'
-    : '<div class="verdict miss"><h3>Not the sequence.</h3></div>';
+  host.innerHTML =
+    '<div class="verdict win"><h3>That is the squiggle!</h3>' +
+    '<div class="answerrow">' +
+    P.answer.map((g, i) => '<div style="animation-delay:' + i * 60 + 'ms">' + svgOf(g) + '</div>').join('') +
+    '</div>' +
+    (isHost(room, uid)
+      ? '<div class="btnrow"><button class="btn primary" data-act="newround">Next round</button></div>'
+      : '') +
+    '</div>';
 }

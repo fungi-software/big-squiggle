@@ -17,6 +17,7 @@ function room(over: Partial<RoomSnapshot> = {}): RoomSnapshot {
     },
     seats: {},
     online: { a: true, b: true, c: true },
+    live: {},
     ...over,
   };
 }

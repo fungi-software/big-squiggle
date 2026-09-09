@@ -5,6 +5,7 @@
  * rules that actually decide a game — who is seated, who may start, when the table has
  * finished briefing — are testable without a database.
  */
+import type { LiveRow } from './live';
 import { RESTRICTIONS } from './restrictions';
 
 export type RoomStatus = 'lobby' | 'briefing' | 'playing' | 'won';
@@ -34,6 +35,7 @@ export interface RoomSnapshot {
   players: Record<string, PlayerRow>;
   seats: Record<string, number>;
   online: Record<string, boolean>;
+  live: Record<string, LiveRow>;
 }
 
 export const MIN_PLAYERS = 2;

@@ -1,4 +1,5 @@
 import { byId } from './dom';
+import { releaseHold } from './room';
 import { deriveScreen, type Screen } from './roomLogic';
 import { getRoom, getUid } from './store';
 import { renderBrief } from './views/brief';
@@ -23,6 +24,11 @@ export function render(): void {
   }
   byId('tagline').hidden = screen !== 'home';
   byId('roomTag').hidden = screen !== 'play';
+
+  // leaving the board must drop the hold; otherwise a stale press blocks the next round
+  if (screen !== 'play' && room && uid && room.live[uid]?.holding) {
+    void releaseHold(room.code, uid);
+  }
 
   if (screen === 'home') renderHome(!!uid);
   else if (screen === 'lobby') renderLobby(room!, uid!);

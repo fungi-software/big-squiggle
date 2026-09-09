@@ -1,8 +1,9 @@
 import { byId } from './dom';
-import { nextRound } from './room';
+import { nextRound, pressHold, releaseHold } from './room';
 import { isHost } from './roomLogic';
 import { firstOpen, place, resetBoard, S } from './state';
 import { getRoom, getUid } from './store';
+import { isMine, resetAttempt } from './views/play';
 
 type DragSource = { kind: 'glyph'; value: number } | { kind: 'slot'; value: number };
 
@@ -136,6 +137,34 @@ export function mountBoard(rerender: () => void): void {
     drag = null;
   });
 
+  const pill = byId('holdBtn');
+
+  // pointer events rather than mouse/touch: one path covers finger, pen and mouse, and
+  // pointercancel is what fires when a scroll or a phone call steals the press
+  pill.addEventListener('pointerdown', (e) => {
+    const room = getRoom();
+    const uid = getUid();
+    if (!room || !uid || room.meta.status !== 'playing') return;
+    void pressHold(room.code, uid, isMine(room));
+    try {
+      // capture keeps a dragged finger on the button; it must never block the press
+      pill.setPointerCapture(e.pointerId);
+    } catch {
+      /* no active pointer with that id — nothing to capture */
+    }
+  });
+
+  const letGo = () => {
+    const room = getRoom();
+    const uid = getUid();
+    if (room && uid) void releaseHold(room.code, uid);
+  };
+  pill.addEventListener('pointerup', letGo);
+  pill.addEventListener('pointercancel', letGo);
+  // a dragged-away finger or an alt-tab must not leave the button held down
+  pill.addEventListener('pointerleave', letGo);
+  window.addEventListener('blur', letGo);
+
   byId('verdictSlot').addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
     if (!b || b.dataset.act !== 'newround') return;
@@ -143,6 +172,7 @@ export function mountBoard(rerender: () => void): void {
     const uid = getUid();
     if (!room || !isHost(room, uid)) return;
     resetBoard();
+    resetAttempt();
     void nextRound(room);
     rerender();
   });

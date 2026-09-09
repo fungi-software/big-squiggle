@@ -12,8 +12,8 @@ nobody can easily describe, and the whole table has to enter that same sequence.
    camera off, microphone off, or sound off.
 3. Nobody may use chat or any channel outside the call. You have to get your shapes
    across the table through a medium you are partly cut off from.
-4. Fill all the positions. Five seconds after the last one is placed the board grades
-   itself. When every player sees the win, the table has it.
+4. Fill all the positions, then everyone holds the button at the same time. It only
+   grades while the whole table is pressing, and a miss tells nobody anything.
 
 The puzzle is derived from the game code on each device — a matching code and player
 count produces the identical deal everywhere, with no server involved.
@@ -42,7 +42,8 @@ index.html          markup only; the page shell
 src/
   main.ts           boot: sign in, rejoin, wire events, first render
   firebase.ts       app init, anonymous auth, emulator wiring
-  room.ts           create / join / start / leave — thin wrappers over roomLogic
+  room.ts           create / join / start / leave / hold — thin wrappers over the logic
+  live.ts           the hold predicate every device evaluates identically
   roomLogic.ts      pure room rules: seating, readiness, host succession, routing
   presence.ts       onDisconnect presence and the server clock offset
   store.ts          the live room snapshot and the transitions nobody presses
@@ -62,6 +63,7 @@ tests/
   puzzle.test.ts    invariants, plus golden fixtures captured from the
   golden.json       pre-refactor build so the deal can never silently drift
   roomLogic.test.ts the room rules, without needing a database
+  live.test.ts      the hold-to-validate predicate
   rules.test.ts     security rules; runs under `npm run test:rules`
 ```
 

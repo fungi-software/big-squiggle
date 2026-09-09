@@ -87,6 +87,15 @@
 
     <div class="plate"><div class="grid" id="glyphGrid"></div></div>
 
+    <div class="holdrow" id="holdRow">
+      <div class="pips" id="holdPips"></div>
+      <button class="holdpill" id="holdBtn" aria-label="Hold to check the sequence">
+        <span class="fill" id="holdFill"></span>
+        <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5.5 5.5L20 7"/></svg>
+      </button>
+    </div>
+
     <!-- last in the flow, so a verdict appearing can never move the board above it -->
     <div id="verdictSlot"></div>
   </section>
