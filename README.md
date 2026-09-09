@@ -20,14 +20,37 @@ count produces the identical deal everywhere, with no server involved.
 
 ## Running it
 
-`index.html` is a single self-contained page with no build step and no dependencies
-beyond a Google Fonts stylesheet.
+```
+npm install
+npm run dev        # http://localhost:5173
+```
+
+Other scripts: `npm run build` (production bundle into `dist/`), `npm run preview`,
+`npm run typecheck`, `npm test`.
+
+## Layout
 
 ```
-open index.html
-# or
-npx serve .
+index.html          markup only; the page shell
+src/
+  main.ts           boot: restore state, wire events, first render
+  glyphs.ts         the 50 marks and their SVG
+  puzzle.ts         the seeded deal — answer, plate, seat ownership
+  random.ts         mulberry32 and friends
+  codes.ts          game-code words, "RAVEN-5" token parsing
+  restrictions.ts   camera / mic / sound off
+  state.ts          the game state, persistence, and the grading timer
+  ui.ts             rendering
+  events.ts         input and drag-and-drop wiring
+  confetti.ts       the fanfare
+  styles.css
+tests/
+  puzzle.test.ts    invariants, plus golden fixtures captured from the
+  golden.json       pre-refactor build so the deal can never silently drift
 ```
+
+Deploys to Firebase Hosting from `main` once `FIREBASE_SERVICE_ACCOUNT` and
+`FIREBASE_PROJECT_ID` are set; until then CI just typechecks, tests, and builds.
 
 ## Where this is going
 

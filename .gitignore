@@ -1,11 +1,13 @@
 .DS_Store
 node_modules/
 dist/
+.vite/
 .firebase/
-.firebaserc
 firebase-debug.log
 *.log
 .env
 .env.local
 .idea/
 .vscode/
+.playwright-mcp/
+tests/__screenshots__/

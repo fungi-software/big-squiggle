@@ -149,10 +149,12 @@ Phase 3 rather than retrofitting.
 
 ## Phasing
 
-**Phase 0 — Make it a project.** Split the single file into ES modules (`glyphs.js`,
-`puzzle.js`, `ui.js`, `state.js`), add Vite, TypeScript, and Firebase Hosting with a
-GitHub Action on `main`. No behaviour change; the game still runs fully local. This is
-the phase that makes every later phase cheap, and it is worth doing before anything else.
+**Phase 0 — Make it a project. _(done)_** The single file is now ES modules under
+`src/`, built by Vite, typechecked under `strict`, and tested by Vitest. CI typechecks,
+tests and builds on every push, and deploys to Firebase Hosting from `main` as soon as
+the project secrets exist. No behaviour changed: `tests/golden.json` pins the deal,
+the plate order and the rendered SVG against fixtures captured from the pre-refactor
+build, so a future refactor cannot silently change what a game code deals.
 
 **Phase 1 — Rooms.** Anonymous auth, `createRoom` / `joinRoom`, presence, live roster,
 share link, host-controlled start. The puzzle is still derived client-side from the room
