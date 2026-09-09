@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   allBriefed, assignSeats, canStart, deriveScreen, isMember, isStale, nextHost,
-  onlineUids, puzzleKey, restrictionIndex, ROOM_TTL_MS, seatedUids,
+  onlineUids, puzzleKey, restrictionIndex, ROOM_TTL_MS, seatedUids, startBlocker,
   type RoomSnapshot,
 } from '../src/roomLogic';
 
@@ -194,5 +194,74 @@ describe('round derivation', () => {
   });
   it('reseeds the deal per round', () => {
     expect(puzzleKey('RAVEN', 1)).not.toBe(puzzleKey('RAVEN', 2));
+  });
+});
+
+describe('why start is locked', () => {
+  it('says nothing when the table is good to go', () => {
+    expect(startBlocker(room({ seats: {} }))).toBe(null);
+  });
+
+  it('names a disconnected player rather than blaming the headcount', () => {
+    // the reported bug: two players, both showing ready, one silently not present
+    const r = room({
+      players: {
+        a: { name: 'Ana', joinedAt: 10, ready: 1 },
+        b: { name: 'Bo', joinedAt: 20, ready: 1 },
+      },
+      online: { a: true },
+    });
+    expect(startBlocker(r)).toEqual({ kind: 'offline', count: 1 });
+  });
+
+  it('lets the rest start without someone who dropped, once enough remain', () => {
+    const r = room({ online: { a: true, b: true } });
+    expect(startBlocker(r)).toBe(null);
+    expect(canStart(r, 'a')).toBe(true);
+  });
+
+  it('reports too few only when nobody is missing', () => {
+    const solo = room({
+      players: { a: { name: 'Ana', joinedAt: 10, ready: 1 } },
+      online: { a: true },
+    });
+    expect(startBlocker(solo)).toEqual({ kind: 'too-few' });
+  });
+
+  it('counts who has not readied', () => {
+    const r = room({
+      players: {
+        a: { name: 'Ana', joinedAt: 10, ready: 1 },
+        b: { name: 'Bo', joinedAt: 20 },
+        c: { name: 'Cy', joinedAt: 30 },
+      },
+    });
+    expect(startBlocker(r)).toEqual({ kind: 'not-ready', count: 2 });
+  });
+
+  it('flags an oversized table first', () => {
+    const players: RoomSnapshot['players'] = {};
+    const online: RoomSnapshot['online'] = {};
+    for (let i = 0; i < 9; i++) {
+      players['p' + i] = { name: 'P' + i, joinedAt: i, ready: 1 };
+      online['p' + i] = true;
+    }
+    expect(startBlocker(room({ players, online }))).toEqual({ kind: 'too-many' });
+  });
+
+  it('agrees with canStart in every case', () => {
+    const good = room({ seats: {} });
+    expect(startBlocker(good)).toBe(null);
+    expect(canStart(good, 'a')).toBe(true);
+
+    const dropped = room({
+      players: {
+        a: { name: 'Ana', joinedAt: 10, ready: 1 },
+        b: { name: 'Bo', joinedAt: 20, ready: 1 },
+      },
+      online: { a: true },
+    });
+    expect(startBlocker(dropped)).not.toBe(null);
+    expect(canStart(dropped, 'a')).toBe(false);
   });
 });

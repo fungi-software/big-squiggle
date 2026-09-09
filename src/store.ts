@@ -1,6 +1,6 @@
 import type { Unsubscribe } from 'firebase/database';
 
-import { bindPresence } from './presence';
+import { assertPresence, bindPresence } from './presence';
 import { beginPlay, claimHost, subscribeRoom } from './room';
 import { allBriefed, isHost, nextHost, type RoomSnapshot } from './roomLogic';
 import { rememberRoom } from './session';
@@ -65,6 +65,9 @@ export function exitRoom(): void {
  */
 function react(next: RoomSnapshot): void {
   if (!uid) return;
+
+  // we are in the room but the room does not think we are here — say so again
+  if (next.players[uid] && !next.online[uid]) assertPresence(next.code, uid);
 
   const hostAway = nextHost(next) === uid && next.meta.hostUid !== uid;
   if (hostAway) {

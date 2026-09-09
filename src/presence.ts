@@ -18,6 +18,23 @@ export function serverNow(): number {
   return Date.now() + offset;
 }
 
+let lastAssert = 0;
+
+/**
+ * Re-declares presence. A frozen or backgrounded tab loses its socket, and iOS in
+ * particular may not resume it until the page is touched again — so anything that looks
+ * like the app waking up calls this, as does noticing our own flag missing from a
+ * snapshot. Throttled so a rejected write cannot become a loop.
+ */
+export function assertPresence(code: string, uid: string): void {
+  const now = Date.now();
+  if (now - lastAssert < 3000) return;
+  lastAssert = now;
+  const onlineRef = ref(db, `rooms/${code}/online/${uid}`);
+  void onDisconnect(onlineRef).remove();
+  void set(onlineRef, true);
+}
+
 /**
  * Marks the player present, and — the reason presence lives in RTDB at all — clears the
  * flag from the server side when the connection drops, however it drops.
@@ -34,7 +51,17 @@ export function bindPresence(code: string, uid: string): () => void {
     void set(onlineRef, true);
   });
 
+  const wake = () => {
+    if (document.visibilityState === 'visible') assertPresence(code, uid);
+  };
+  document.addEventListener('visibilitychange', wake);
+  window.addEventListener('focus', wake);
+  window.addEventListener('online', wake);
+
   return () => {
+    document.removeEventListener('visibilitychange', wake);
+    window.removeEventListener('focus', wake);
+    window.removeEventListener('online', wake);
     stop();
     void onDisconnect(onlineRef).cancel();
     void onDisconnect(liveRef).cancel();

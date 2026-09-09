@@ -188,7 +188,8 @@ input:focus,select:focus{outline:2.5px solid var(--accent);outline-offset:1px;bo
 .chip{display:flex;align-items:center;gap:7px;background:var(--surface-2);border:1.5px solid var(--line);
   border-radius:999px;padding:8px 15px;font-size:14px;font-weight:500}
 .chip.ready{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
-.chip.away{opacity:.4}
+.chip.away{opacity:.55;border-style:dashed;color:var(--ink-3)}
+.chip.away .who{text-decoration:line-through;text-decoration-thickness:1px}
 .chip.me .who{font-weight:700}
 .chip .host{color:var(--accent);font-size:11px}
 .chip.ready .host{color:var(--ok)}

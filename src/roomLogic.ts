@@ -86,6 +86,29 @@ export function canStart(room: RoomSnapshot, uid: string): boolean {
   return present.every((u) => isReady(room, u));
 }
 
+/** Why the host cannot start yet — so a dead button can say what it is waiting for. */
+export type StartBlock =
+  | { kind: 'too-few' }
+  | { kind: 'too-many' }
+  | { kind: 'offline'; count: number }
+  | { kind: 'not-ready'; count: number }
+  | null;
+
+export function startBlocker(room: RoomSnapshot): StartBlock {
+  const present = onlineUids(room);
+  if (present.length > MAX_PLAYERS) return { kind: 'too-many' };
+
+  if (present.length < MIN_PLAYERS) {
+    // a player who readied and then dropped still sits in the roster, so "2 players
+    // minimum" reads as a broken button. Name what actually happened.
+    const away = Object.keys(room.players).filter((u) => !isOnline(room, u)).length;
+    return away ? { kind: 'offline', count: away } : { kind: 'too-few' };
+  }
+
+  const notReady = present.filter((u) => !isReady(room, u)).length;
+  return notReady ? { kind: 'not-ready', count: notReady } : null;
+}
+
 /** Seats are handed out in join order, all at once, so two players cannot claim one. */
 export function assignSeats(room: RoomSnapshot): Record<string, number> {
   const seats: Record<string, number> = {};
