@@ -42,10 +42,6 @@ img{max-width:100%}
 .wrap{max-width:760px;margin:0 auto;padding:22px 20px 72px}
 #lobbyView,#playView{display:flex;flex-direction:column;gap:20px}
 .confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
-.houserule{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--warn);
-  border-radius:12px;padding:13px 18px}
-.houserule .t{font-family:var(--display);font-weight:700;font-size:15px;color:var(--warn);line-height:1.25}
-.houserule .d{font-size:13.5px;color:var(--ink-2);margin-top:3px;max-width:64ch}
 .restrictbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
   background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--warn);
   border-radius:12px;padding:13px 18px}
@@ -171,7 +167,17 @@ input:focus,select:focus{outline:2.5px solid var(--accent);outline-offset:1px;bo
 .roomtag b{color:var(--ink);font-weight:500;letter-spacing:.1em}
 
 /* ---------- home ---------- */
-.home{display:flex;flex-direction:column;gap:16px;max-width:340px;margin:0 auto;padding-top:8px}
+.home{display:flex;flex-direction:column;gap:20px;max-width:340px;margin:0 auto;padding-top:8px}
+
+/* name first, then the choice — numbered so the order cannot be misread */
+.steps{display:flex;flex-direction:column;gap:20px}
+.step{display:flex;gap:12px;align-items:flex-start;transition:opacity .2s}
+.step .num{flex:none;width:23px;height:23px;border-radius:50%;background:var(--surface-3);
+  color:var(--ink-3);font-family:var(--mono);font-size:12px;display:grid;place-items:center;
+  margin-top:1px;transition:background .2s,color .2s}
+.step.on .num{background:var(--accent);color:var(--accent-ink)}
+.stepbody{flex:1;min-width:0;display:flex;flex-direction:column;gap:11px}
+.step.waiting{opacity:.4}
 .btn.wide{width:100%;padding:13px 16px;font-size:15px}
 .rule{display:flex;align-items:center;gap:12px;color:var(--ink-3);font-size:12px;
   font-family:var(--mono);text-transform:uppercase;letter-spacing:.12em}
@@ -193,7 +199,6 @@ input:focus,select:focus{outline:2.5px solid var(--accent);outline-offset:1px;bo
 .chip.me .who{font-weight:700}
 .chip .host{color:var(--accent);font-size:11px}
 .chip.ready .host{color:var(--ok)}
-.houserule-min{font-size:12.5px;color:var(--ink-3);text-align:center;margin-top:8px}
 #lobbyView{align-items:center}
 #lobbyView .btnrow{justify-content:center}
 #readyBtn.on{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}

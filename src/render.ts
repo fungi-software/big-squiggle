@@ -33,7 +33,7 @@ export function render(): void {
     void releaseHold(room.code, uid);
   }
 
-  if (screen === 'home') renderHome(!!uid);
+  if (screen === 'home') renderHome();
   else if (screen === 'lobby') renderLobby(room!, uid!);
   else if (screen === 'brief') renderBrief(room!, uid!);
   else renderPlay(room!, uid!, render);

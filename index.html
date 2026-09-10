@@ -54,18 +54,28 @@
         <p class="sub">Play over a video call app like Zoom <b>with chat disabled</b>, and do not use any other external forms of communication.</p>
       </div>
 
-      <div class="field">
-        <label for="nameInput">Name</label>
-        <input type="text" id="nameInput" maxlength="24" autocomplete="nickname" spellcheck="false">
-      </div>
+      <div class="steps">
+        <div class="step" id="stepName">
+          <span class="num">1</span>
+          <div class="stepbody">
+            <label for="nameInput">Your name</label>
+            <input type="text" id="nameInput" maxlength="24" autocomplete="nickname" spellcheck="false">
+          </div>
+        </div>
 
-      <button class="btn primary wide" id="createBtn" disabled>Create</button>
+        <div class="step" id="stepRoom">
+          <span class="num">2</span>
+          <div class="stepbody">
+            <button class="btn primary wide" id="createBtn" disabled>Create a room</button>
 
-      <div class="rule"><span>or</span></div>
+            <div class="rule"><span>or</span></div>
 
-      <div class="codewrap">
-        <input type="text" id="joinCode" maxlength="12" placeholder="CODE" spellcheck="false" autocomplete="off" aria-label="Game code">
-        <button class="btn" id="joinBtn" disabled>Join</button>
+            <div class="codewrap">
+              <input type="text" id="joinCode" maxlength="12" placeholder="CODE" spellcheck="false" autocomplete="off" aria-label="Game code">
+              <button class="btn" id="joinBtn" disabled>Join</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <p class="err" id="homeErr" hidden></p>
@@ -90,8 +100,6 @@
     <div class="btnrow">
       <button class="btn ghost" id="resumeBtn" hidden>End round</button>
     </div>
-
-    <p class="houserule-min">No chat or outside communication.</p>
   </section>
 
   <!-- ================= BRIEFING ================= -->

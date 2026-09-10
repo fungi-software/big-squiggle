@@ -43,7 +43,10 @@ async function attempt(run: (uid: string, name: string) => Promise<string>): Pro
 }
 
 export function mountHome(rerender: () => void): void {
-  byId<HTMLInputElement>('nameInput').value = rememberedName();
+  const nameField = byId<HTMLInputElement>('nameInput');
+  nameField.value = rememberedName();
+  // step two lights up the moment there is a name, which is the whole explanation
+  nameField.addEventListener('input', renderHome);
 
   byId('createBtn').addEventListener('click', () => {
     void attempt((uid, name) => createRoom(uid, name)).then(rerender);
@@ -73,8 +76,15 @@ export function mountHome(rerender: () => void): void {
   });
 }
 
-export function renderHome(signedIn: boolean): void {
-  byId<HTMLButtonElement>('createBtn').disabled = !signedIn;
-  byId<HTMLButtonElement>('joinBtn').disabled = !signedIn;
+export function renderHome(): void {
+  const signedIn = !!getUid();
+  const named = byId<HTMLInputElement>('nameInput').value.trim().length > 0;
+  const ready = signedIn && named;
+
+  byId<HTMLButtonElement>('createBtn').disabled = !ready;
+  byId<HTMLButtonElement>('joinBtn').disabled = !ready;
   byId('connecting').hidden = signedIn;
+
+  byId('stepName').classList.toggle('on', named);
+  byId('stepRoom').classList.toggle('waiting', !named);
 }
