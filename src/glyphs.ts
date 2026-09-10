@@ -1,6 +1,6 @@
 /**
  * The glyph set: marks chosen to resist naming, in deliberate near-neighbour pairs.
- * A spec is either raw SVG markup or `{m}` — the same markup, mirrored.
+ * A spec is either raw SVG markup or `{m}`, meaning the same markup mirrored.
  */
 export type GlyphSpec = string | { m: string };
 

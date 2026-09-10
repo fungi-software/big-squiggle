@@ -11,7 +11,7 @@ export interface Restriction {
  * one player cannot be seen, one cannot be heard, one cannot receive. That is what turns
  * the round into a routing problem instead of three private difficulties.
  *
- * The last entry of each set is the isolating one — the player who can transmit but not
+ * The last entry of each set is the isolating one: the player who can transmit but not
  * receive. A table of two never draws it, because with one other person there is no way
  * back into the conversation.
  */

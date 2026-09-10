@@ -65,7 +65,7 @@ export async function createRoom(uid: string, name: string): Promise<string> {
   for (let attempt = 0; attempt < 8; attempt++) {
     const code = randomCode();
     const result = await runTransaction(roomRef(code, '/meta'), (current: RoomMeta | null) => {
-      if (!isStale(current, serverNow())) return undefined; // taken and alive — abort
+      if (!isStale(current, serverNow())) return undefined; // taken and alive, so abort
       return {
         hostUid: uid,
         status: 'lobby',
@@ -183,7 +183,7 @@ export function nextRound(room: RoomSnapshot): Promise<void> {
 }
 
 /**
- * Sends everyone back to the lobby — the way out when a player drops mid-round.
+ * Sends everyone back to the lobby: the way out when a player drops mid-round.
  *
  * The round number moves on even though nothing was solved, for two reasons: the next
  * start deals a fresh puzzle rather than the one they half-saw, and the round-scoped
@@ -226,7 +226,7 @@ export function releaseHold(code: string, uid: string): Promise<void> {
  * Whoever sees the win first records it; the guards make the race between them harmless.
  *
  * `solvedAt` is the moment the hold completed, which every device computes to the same
- * server-clock value — using a fresh timestamp here would instead record whichever
+ * server-clock value. Using a fresh timestamp here would instead record whichever
  * client's write landed first, and the table would disagree about its own time.
  */
 export async function declareWon(

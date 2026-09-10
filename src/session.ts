@@ -14,7 +14,7 @@ function write(key: string, value: string): void {
     if (value) localStorage.setItem(key, value);
     else localStorage.removeItem(key);
   } catch {
-    /* private browsing — the session just will not survive a refresh */
+    /* private browsing, so the session just will not survive a refresh */
   }
 }
 

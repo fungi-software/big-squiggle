@@ -4,7 +4,7 @@ import { mulberry32, range, shuffled } from './random';
 export interface Puzzle {
   seed: number;
   slots: number;
-  /** The glyphs on the plate this round — both halves of every chosen pair. */
+  /** The glyphs on the plate this round: both halves of every chosen pair. */
   pool: number[];
   answer: number[];
   /** slot index -> seat that is given that slot */

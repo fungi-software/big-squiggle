@@ -149,7 +149,7 @@ export function mountBoard(rerender: () => void): void {
       // capture keeps a dragged finger on the button; it must never block the press
       pill.setPointerCapture(e.pointerId);
     } catch {
-      /* no active pointer with that id — nothing to capture */
+      /* no active pointer with that id, so there is nothing to capture */
     }
   });
 

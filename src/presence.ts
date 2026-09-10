@@ -22,7 +22,7 @@ let lastAssert = 0;
 
 /**
  * Re-declares presence. A frozen or backgrounded tab loses its socket, and iOS in
- * particular may not resume it until the page is touched again — so anything that looks
+ * particular may not resume it until the page is touched again, so anything that looks
  * like the app waking up calls this, as does noticing our own flag missing from a
  * snapshot. Throttled so a rejected write cannot become a loop.
  */
@@ -36,8 +36,9 @@ export function assertPresence(code: string, uid: string): void {
 }
 
 /**
- * Marks the player present, and — the reason presence lives in RTDB at all — clears the
- * flag from the server side when the connection drops, however it drops.
+ * Marks the player present, and clears the flag from the server side when the
+ * connection drops, however it drops. That second half is the reason presence lives in
+ * RTDB at all.
  */
 export function bindPresence(code: string, uid: string): () => void {
   const onlineRef = ref(db, `rooms/${code}/online/${uid}`);

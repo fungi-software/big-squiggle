@@ -29,7 +29,7 @@ function puzzleOf(room: RoomSnapshot): Puzzle {
   return buildPuzzle(puzzleKey(room.code, room.meta.roundId), room.meta.playerCount);
 }
 
-/** Whether this player's own sequence matches — computed here, published as one bool. */
+/** Whether this player's own sequence matches. Computed here, published as one bool. */
 export function isMine(room: RoomSnapshot): boolean {
   const answer = puzzleOf(room).answer;
   return answer.every((g, i) => S.draft[i] === g);

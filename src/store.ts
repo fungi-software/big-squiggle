@@ -66,12 +66,12 @@ export function exitRoom(): void {
 function react(next: RoomSnapshot): void {
   if (!uid) return;
 
-  // we are in the room but the room does not think we are here — say so again
+  // we are in the room but the room does not think we are here, so say so again
   if (next.players[uid] && !next.online[uid]) assertPresence(next.code, uid);
 
   const hostAway = nextHost(next) === uid && next.meta.hostUid !== uid;
   if (hostAway) {
-    // wait out the grace period before taking over — a host who is merely reloading
+    // wait out the grace period before taking over. A host who is merely reloading
     // comes back within it, and the room should still be theirs when they do
     if (!hostWatch) {
       hostWatch = setTimeout(() => {

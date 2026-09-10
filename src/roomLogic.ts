@@ -2,8 +2,8 @@
  * Everything about a room that is a pure function of its snapshot.
  *
  * The Firebase calls in `room.ts` are deliberately thin wrappers over these, so the
- * rules that actually decide a game — who is seated, who may start, when the table has
- * finished briefing — are testable without a database.
+ * rules that actually decide a game are testable without a database: who is seated,
+ * who may start, when the table has finished briefing.
  */
 import type { LiveRow } from './live';
 import { seedFrom } from './puzzle';
@@ -60,7 +60,7 @@ export function isOnline(room: RoomSnapshot, uid: string): boolean {
   return !!room.online[uid];
 }
 
-/** Members present right now, oldest join first — the order seats are handed out in. */
+/** Members present right now, oldest join first: the order seats are handed out in. */
 export function onlineUids(room: RoomSnapshot): string[] {
   return Object.keys(room.players)
     .filter((uid) => room.online[uid])
@@ -99,7 +99,7 @@ export function canStart(room: RoomSnapshot, uid: string): boolean {
 export interface RoundGap {
   /** Seats dealt this round with nobody in them. */
   missing: number;
-  /** Gone for good — they left the room. */
+  /** Gone for good, having left the room. */
   left: number;
   /** Still members, just not connected; presence may bring them back. */
   away: number;
@@ -122,7 +122,7 @@ export function roundGap(room: RoomSnapshot): RoundGap | null {
   return missing ? { missing, left, away } : null;
 }
 
-/** Why the host cannot start yet — so a dead button can say what it is waiting for. */
+/** Why the host cannot start yet, so a dead button can say what it is waiting for. */
 export type StartBlock =
   | { kind: 'too-few' }
   | { kind: 'too-many' }
@@ -240,9 +240,9 @@ export interface SolveBadge {
 /**
  * What the win panel says about the clock.
  *
- * `prevBest` must be the room's record as it stood *before* this solve was written —
- * reading it back off the room compares the time against itself and no solve is ever a
- * record. And only a device that watched the solve happen can claim one: after a
+ * `prevBest` must be the room's record as it stood *before* this solve was written.
+ * Reading it back off the room compares the time against itself, and then no solve is
+ * ever a record. And only a device that watched the solve happen can claim one: after a
  * refresh there is nothing to compare against, so it shows the time plainly.
  */
 export function solveBadge(

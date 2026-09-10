@@ -34,7 +34,7 @@ export function saveDraft(key: string): void {
   try {
     localStorage.setItem(DRAFT_KEY, JSON.stringify({ key, draft: S.draft }));
   } catch {
-    /* storage blocked — the draft just will not survive a refresh */
+    /* storage blocked, so the draft just will not survive a refresh */
   }
 }
 

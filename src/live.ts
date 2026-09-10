@@ -12,7 +12,7 @@ export interface AttemptState {
   down: number;
   total: number;
   progress: number;
-  /** Set once resolved. Nobody learns whose sequence was wrong — only that one was. */
+  /** Set once resolved. Nobody learns whose sequence was wrong, only that one was. */
   won?: boolean;
   /** The press that started this attempt; identifies it so it resolves exactly once. */
   startedAt?: number;

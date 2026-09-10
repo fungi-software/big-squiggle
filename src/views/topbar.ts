@@ -5,8 +5,8 @@ import { exitRoom, getRoom, getUid } from '../store';
 
 /**
  * Leaving is two taps rather than one. A misclick during a round would strand the rest
- * of the table with a sequence nobody can complete, so it asks first — but in place,
- * without a modal that would swallow the board behind it.
+ * of the table with a sequence nobody can complete, so it asks first, in place rather
+ * than through a modal that would swallow the board behind it.
  */
 function ask(open: boolean): void {
   byId('doorBtn').hidden = open;
