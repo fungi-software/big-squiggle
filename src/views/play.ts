@@ -111,7 +111,7 @@ export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void
 
   saveDraft(stamp);
   renderAttempt(room, rerender);
-  renderWin(room, uid, P);
+  renderWin(room, uid);
 }
 
 /**
@@ -181,7 +181,7 @@ function stopTicker(): void {
   }
 }
 
-function renderWin(room: RoomSnapshot, uid: string, P: Puzzle): void {
+function renderWin(room: RoomSnapshot, uid: string): void {
   const host = byId('verdictSlot');
   const over = room.meta.status === 'won' || localWon === room.meta.roundId;
   const mode = over ? `won:${room.meta.roundId}:${room.meta.solvedAt ?? 0}:${room.meta.bestMs ?? 0}` : 'idle';
@@ -202,16 +202,14 @@ function renderWin(room: RoomSnapshot, uid: string, P: Puzzle): void {
   const clock =
     badge.time == null
       ? ''
-      : '<div class="solvetime' + (badge.beat ? ' best' : '') + '">' + formatDuration(badge.time) + '</div>' +
+      : '<div class="solvetime' + (badge.beat ? ' best' : '') + '">' +
+        '<span class="lbl">Completed in</span> ' + formatDuration(badge.time) + '</div>' +
         (badge.compareTo
           ? '<div class="prevbest">' + (badge.beat ? 'beat ' : 'best ') + formatDuration(badge.compareTo) + '</div>'
           : '');
 
   host.innerHTML =
     '<div class="verdict win"><h3>That is the squiggle!</h3>' + clock +
-    '<div class="answerrow">' +
-    P.answer.map((g, i) => '<div style="animation-delay:' + i * 60 + 'ms">' + svgOf(g) + '</div>').join('') +
-    '</div>' +
     (isHost(room, uid)
       ? '<div class="btnrow"><button class="btn primary" data-act="newround">Next round</button></div>'
       : '') +
