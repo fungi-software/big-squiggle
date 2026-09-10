@@ -7,9 +7,11 @@ nobody can easily describe, and the whole table has to enter that same sequence.
 
 1. Someone rolls a **game code** (`RAVEN-5` — the word and the player count together)
    and shares it with the table. Everyone types the same token.
-2. Each player takes a **seat**. The seat decides two things: which positions in the
-   sequence you already know, and which **restriction** you play under —
-   camera off, microphone off, or sound off.
+2. Each player takes a **seat**, which decides which positions in the sequence they
+   already know. Each round also deals everyone a **restriction**. Over a video call
+   that is camera off, microphone off or sound off; in the same room it is no talking,
+   no gestures, or no looking at anyone. A table of two never draws the third of
+   either set — with one other person, someone who cannot receive has no way back in.
 3. Nobody may use chat or any channel outside the call. You have to get your shapes
    across the table through a medium you are partly cut off from.
 4. Fill all the positions, then everyone holds the button at the same time. It only
@@ -55,7 +57,7 @@ src/
   puzzle.ts         the seeded deal — answer, plate, seat ownership
   random.ts         mulberry32 and friends
   codes.ts          game-code words, "RAVEN-5" token parsing
-  restrictions.ts   camera / mic / sound off
+  restrictions.ts   the two condition sets, for a call and for a table
   state.ts          the game state, persistence, and the grading timer
   ui.ts             rendering
   events.ts         input and drag-and-drop wiring

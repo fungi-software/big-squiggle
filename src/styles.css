@@ -303,3 +303,13 @@ input:focus,select:focus{outline:2.5px solid var(--accent);outline-offset:1px;bo
   animation:vIn .24s ease-out}
 .gapnotice .btn{border-color:var(--warn);color:var(--warn);background:transparent}
 .gapnotice .btn:hover{background:var(--surface)}
+
+/* ---------- how are you playing ---------- */
+.modepick{display:flex;gap:0;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:10px;padding:3px;width:min(280px,100%)}
+.modepick:has(.modebtn:disabled){opacity:.75}
+.modebtn{flex:1;background:transparent;border:none;border-radius:8px;padding:8px 10px;
+  font-size:13.5px;font-weight:600;color:var(--ink-3);transition:background .14s,color .14s}
+.modebtn.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.modebtn:hover:not(.on):not(:disabled){color:var(--ink-2)}
+.modebtn:disabled{cursor:default}

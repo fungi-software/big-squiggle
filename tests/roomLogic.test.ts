@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  CALL_RESTRICTIONS, RESTRICTION_KINDS, TABLE_RESTRICTIONS,
+} from '../src/restrictions';
+import {
   allBriefed, assignSeats, canStart, deriveScreen, elapsedMs, formatDuration, isMember,
-  isNewBest, isStale, nextHost, roundGap, solveBadge,
+  gameMode, isNewBest, isStale, nextHost, roundGap, solveBadge,
   onlineUids, puzzleKey, restrictionsForRound, ROOM_TTL_MS, seatedUids, startBlocker,
   type RoomSnapshot,
 } from '../src/roomLogic';
@@ -422,5 +425,39 @@ describe('spotting a hole in the round', () => {
   it('watches the briefing too, where the gate would never open', () => {
     const r = playing({ meta: { ...room().meta, status: 'briefing', playerCount: 3 }, online: { a: true, b: true } });
     expect(roundGap(r)?.away).toBe(1);
+  });
+});
+
+describe('which set of conditions a room plays with', () => {
+  it('treats a room with no mode recorded as a video call', () => {
+    expect(gameMode(room())).toBe('call');
+    expect(gameMode(room({ meta: { ...room().meta, mode: undefined } }))).toBe('call');
+  });
+
+  it('reads the in-person set when the room was made for it', () => {
+    expect(gameMode(room({ meta: { ...room().meta, mode: 'table' } }))).toBe('table');
+  });
+
+  it('deals the same way whichever set is in play', () => {
+    // the sets are the same size, so dealing never has to know which one it is
+    expect(CALL_RESTRICTIONS).toHaveLength(RESTRICTION_KINDS);
+    expect(TABLE_RESTRICTIONS).toHaveLength(RESTRICTION_KINDS);
+  });
+
+  it('keeps the isolating condition last, so a pair never draws it', () => {
+    // index 2 is the one that can transmit but not receive; restrictionsForRound only
+    // deals indices 0 and 1 to a table of two
+    expect(CALL_RESTRICTIONS[2]!.t).toBe('Sound off');
+    expect(TABLE_RESTRICTIONS[2]!.t).toBe('No looking');
+    for (let round = 1; round <= 30; round++) {
+      expect(restrictionsForRound('RAVEN', round, 2)).not.toContain(2);
+    }
+  });
+
+  it('instructs rather than describes, in both sets', () => {
+    for (const r of [...CALL_RESTRICTIONS, ...TABLE_RESTRICTIONS]) {
+      expect(r.t.length).toBeGreaterThan(0);
+      expect(r.d).toMatch(/^(Turn|Mute|Do not|Keep)/);
+    }
   });
 });

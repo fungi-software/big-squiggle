@@ -1,8 +1,8 @@
 import { byId } from '../dom';
 import { restrictionIcon } from '../icons';
-import { RESTRICTIONS } from '../restrictions';
+import { restrictionsFor } from '../restrictions';
 import { setBriefed } from '../room';
-import { isBriefed, restrictionForSeat, seatedUids, type RoomSnapshot } from '../roomLogic';
+import { gameMode, isBriefed, restrictionForSeat, seatedUids, type RoomSnapshot } from '../roomLogic';
 import { getRoom, getUid } from '../store';
 
 export function mountBrief(): void {
@@ -15,9 +15,11 @@ export function mountBrief(): void {
 
 export function renderBrief(room: RoomSnapshot, uid: string): void {
   const seat = room.seats[uid] ?? 0;
-  const restriction = RESTRICTIONS[restrictionForSeat(room, seat)]!;
+  const mode = gameMode(room);
+  const index = restrictionForSeat(room, seat);
+  const restriction = restrictionsFor(mode)[index]!;
 
-  byId('briefIcon').innerHTML = restrictionIcon(restrictionForSeat(room, seat));
+  byId('briefIcon').innerHTML = restrictionIcon(mode, index);
   byId('briefTitle').textContent = restriction.t;
   byId('briefDesc').textContent = restriction.d;
 

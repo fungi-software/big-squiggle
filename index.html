@@ -59,7 +59,7 @@
     <div class="home">
       <div class="intro">
         <p class="lede">A communication puzzle game for 2&ndash;8 players.</p>
-        <p class="sub">Play over a video call app like Zoom <b>with chat disabled</b>, and do not use any other external forms of communication.</p>
+        <p class="sub">Play over a video call, or together in one room. <b>No chat and nothing written or drawn</b> — the shapes have to get across some other way.</p>
       </div>
 
       <div class="steps">
@@ -102,6 +102,11 @@
       <button class="btn primary" id="startBtn" hidden>Start</button>
     </div>
 
+    <div class="modepick" id="modePick" role="group" aria-label="How are you playing?">
+      <button type="button" class="modebtn" data-mode="call">Video call</button>
+      <button type="button" class="modebtn" data-mode="table">In person</button>
+    </div>
+    <p class="hint" id="modeLine"></p>
     <p class="hint" id="lobbyHint" hidden></p>
     <p class="hint" id="waiting" hidden>Round in progress.</p>
 

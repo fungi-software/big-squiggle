@@ -5,10 +5,11 @@ import { restrictionIcon } from '../icons';
 import { attempt, HOLD_MS } from '../live';
 import { serverNow } from '../presence';
 import { buildPuzzle, plateOrder, type Puzzle } from '../puzzle';
-import { RESTRICTIONS } from '../restrictions';
+import { restrictionsFor } from '../restrictions';
 import { declareWon } from '../room';
 import {
-  elapsedMs, formatDuration, puzzleKey, restrictionForSeat, roundGap, seatedUids, solveBadge,
+  elapsedMs, formatDuration, gameMode, puzzleKey, restrictionForSeat, roundGap, seatedUids,
+  solveBadge,
   type RoomSnapshot,
 } from '../roomLogic';
 import { firstOpen, restoreDraft, S, saveDraft } from '../state';
@@ -45,10 +46,11 @@ export function resetAttempt(): void {
 export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void): void {
   const P = puzzleOf(room);
   const seat = room.seats[uid] ?? 0;
+  const mode = gameMode(room);
   const ri = restrictionForSeat(room, seat);
 
-  byId('restrictIcon').innerHTML = restrictionIcon(ri);
-  byId('restrictIcon').setAttribute('title', RESTRICTIONS[ri]!.t);
+  byId('restrictIcon').innerHTML = restrictionIcon(mode, ri);
+  byId('restrictIcon').setAttribute('title', restrictionsFor(mode)[ri]!.t);
 
   const holds: number[] = [];
   for (let i = 0; i < P.slots; i++) {

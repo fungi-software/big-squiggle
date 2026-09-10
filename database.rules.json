@@ -33,6 +33,7 @@
             ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 8"
           },
           "createdAt": { ".validate": "newData.isNumber()" },
+          "mode": { ".validate": "newData.val().matches(/^(call|table)$/)" },
           "playStartedAt": {
             ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists()",
             ".validate": "newData.isNumber()"

@@ -4,6 +4,7 @@ import {
 } from 'firebase/database';
 
 import { randomCode } from './codes';
+import type { GameMode } from './restrictions';
 import { db } from './firebase';
 import { serverNow } from './presence';
 import {
@@ -68,6 +69,7 @@ export async function createRoom(uid: string, name: string): Promise<string> {
       return {
         hostUid: uid,
         status: 'lobby',
+        mode: 'call',
         roundId: 1,
         playerCount: 0,
         createdAt: serverTimestamp(),
@@ -136,6 +138,11 @@ export async function leaveRoom(code: string, uid: string, room?: RoomSnapshot |
 
 export function touch(code: string): Promise<void> {
   return update(roomRef(code, '/meta'), { lastActive: serverTimestamp() });
+}
+
+/** Set in the lobby, where the table can see which game they are agreeing to. */
+export function setMode(code: string, mode: GameMode): Promise<void> {
+  return update(roomRef(code, '/meta'), { mode, lastActive: serverTimestamp() });
 }
 
 export function setReady(code: string, uid: string, roundId: number, ready: boolean): Promise<void> {

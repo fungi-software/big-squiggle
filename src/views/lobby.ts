@@ -1,7 +1,7 @@
 import { byId, esc } from '../dom';
-import { abandonRound, setReady, shareLink, startRound } from '../room';
+import { abandonRound, setMode, setReady, shareLink, startRound } from '../room';
 import {
-  canStart, isHost, isOnline, isReady, MAX_PLAYERS, MIN_PLAYERS, startBlocker,
+  canStart, gameMode, isHost, isOnline, isReady, MAX_PLAYERS, MIN_PLAYERS, startBlocker,
   type RoomSnapshot,
 } from '../roomLogic';
 import { getRoom, getUid } from '../store';
@@ -18,6 +18,14 @@ export function mountLobby(): void {
     const room = getRoom();
     const uid = getUid();
     if (room && uid && canStart(room, uid)) void startRound(room, room.meta.roundId);
+  });
+
+  byId('modePick').addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-mode]');
+    const room = getRoom();
+    const uid = getUid();
+    if (!b || !room || !isHost(room, uid) || room.meta.status !== 'lobby') return;
+    void setMode(room.code, b.dataset.mode === 'table' ? 'table' : 'call');
   });
 
   byId('resumeBtn').addEventListener('click', () => {
@@ -71,6 +79,20 @@ export function renderLobby(room: RoomSnapshot, uid: string): void {
   byId('resumeBtn').hidden = !(host && midRound);
   byId('waiting').hidden = !midRound;
   byId('lobbyControls').hidden = midRound;
+
+  // the host chooses here, where the table can see it; everyone else reads it
+  const mode = gameMode(room);
+  byId('modePick').hidden = midRound;
+  byId('modePick')
+    .querySelectorAll<HTMLButtonElement>('[data-mode]')
+    .forEach((b) => {
+      b.classList.toggle('on', b.dataset.mode === mode);
+      b.disabled = !host;
+    });
+  const modeLine = byId('modeLine');
+  modeLine.hidden = midRound;
+  modeLine.textContent =
+    mode === 'table' ? 'Nothing written or drawn, not even in the air.' : 'Turn chat off in your call app.';
 
   const block = startBlocker(room);
   const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);

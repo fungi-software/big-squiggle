@@ -8,7 +8,7 @@
 import type { LiveRow } from './live';
 import { seedFrom } from './puzzle';
 import { mulberry32, shuffled } from './random';
-import { RESTRICTIONS } from './restrictions';
+import { RESTRICTION_KINDS, type GameMode } from './restrictions';
 
 export type RoomStatus = 'lobby' | 'briefing' | 'playing' | 'won';
 export type Screen = 'home' | 'lobby' | 'brief' | 'play';
@@ -20,6 +20,8 @@ export interface RoomMeta {
   playerCount: number;
   createdAt: number;
   lastActive: number;
+  /** Which set of conditions this room plays with. Absent means the video-call set. */
+  mode?: GameMode;
   /** Server time the board went live; the clock counts from here. */
   playStartedAt?: number;
   /** Server time the table solved it. Derived from the hold, not from a round trip. */
@@ -187,10 +189,14 @@ export function nextHost(room: RoomSnapshot): string | null {
  * Seeded from the room and round so every device deals the same hand without asking.
  */
 export function restrictionsForRound(code: string, roundId: number, playerCount: number): number[] {
-  const kinds = playerCount < 3 ? 2 : RESTRICTIONS.length;
+  const kinds = playerCount < 3 ? 2 : RESTRICTION_KINDS;
   const pool: number[] = [];
   for (let i = 0; i < playerCount; i++) pool.push(i % kinds);
   return shuffled(pool, mulberry32(seedFrom(code + 'R' + roundId, playerCount)));
+}
+
+export function gameMode(room: RoomSnapshot): GameMode {
+  return room.meta.mode === 'table' ? 'table' : 'call';
 }
 
 export function restrictionForSeat(room: RoomSnapshot, seat: number): number {
