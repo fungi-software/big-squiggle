@@ -231,3 +231,20 @@ input:focus,select:focus{outline:2.5px solid var(--accent);outline-offset:1px;bo
   10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)}
   30%,50%,70%{transform:translateX(-7px)} 40%,60%{transform:translateX(7px)}
 }
+
+/* ---------- leaving ---------- */
+.topright{display:flex;align-items:center;gap:10px}
+.doorbtn{background:transparent;border:1px solid transparent;border-radius:9px;padding:6px;
+  color:var(--ink-3);display:grid;place-items:center;transition:color .13s,border-color .13s,background .13s}
+.doorbtn svg{width:21px;height:21px}
+.doorbtn:hover{color:var(--warn);border-color:var(--line);background:var(--surface)}
+.leaveask{display:flex;align-items:center;gap:6px;background:var(--surface);
+  border:1.5px solid var(--warn);border-radius:999px;padding:4px 6px 4px 13px;
+  font-size:13px;color:var(--warn);white-space:nowrap;
+  animation:askIn .16s cubic-bezier(.2,1.1,.35,1)}
+@keyframes askIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+.leaveask button{border:none;border-radius:50%;width:27px;height:27px;display:grid;place-items:center;
+  background:var(--surface-2);color:var(--ink-2);transition:background .12s,color .12s}
+.leaveask button svg{width:14px;height:14px}
+.leaveask .yes:hover{background:var(--warn);color:var(--accent-ink)}
+.leaveask .no:hover{background:var(--surface-3);color:var(--ink)}

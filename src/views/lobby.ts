@@ -1,12 +1,12 @@
 import { byId, esc } from '../dom';
-import { abandonRound, leaveRoom, setReady, shareLink, startRound } from '../room';
+import { abandonRound, setReady, shareLink, startRound } from '../room';
 import {
   canStart, isHost, isOnline, isReady, MAX_PLAYERS, MIN_PLAYERS, startBlocker,
   type RoomSnapshot,
 } from '../roomLogic';
-import { exitRoom, getRoom, getUid } from '../store';
+import { getRoom, getUid } from '../store';
 
-export function mountLobby(rerender: () => void): void {
+export function mountLobby(): void {
   byId('readyBtn').addEventListener('click', () => {
     const room = getRoom();
     const uid = getUid();
@@ -23,14 +23,6 @@ export function mountLobby(rerender: () => void): void {
   byId('resumeBtn').addEventListener('click', () => {
     const room = getRoom();
     if (room) void abandonRound(room.code);
-  });
-
-  byId('leaveRoomBtn').addEventListener('click', () => {
-    const room = getRoom();
-    const uid = getUid();
-    if (room && uid) void leaveRoom(room.code, uid);
-    exitRoom();
-    rerender();
   });
 
   byId('roomCode').addEventListener('click', function () {

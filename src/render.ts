@@ -6,6 +6,7 @@ import { renderBrief } from './views/brief';
 import { renderHome } from './views/home';
 import { renderLobby } from './views/lobby';
 import { renderPlay } from './views/play';
+import { renderTopbar } from './views/topbar';
 
 const VIEWS: Record<Screen, string> = {
   home: 'homeView',
@@ -22,8 +23,8 @@ export function render(): void {
   for (const [name, id] of Object.entries(VIEWS)) {
     byId(id).hidden = name !== screen;
   }
-  byId('tagline').hidden = screen !== 'home';
   byId('roomTag').hidden = screen !== 'play';
+  renderTopbar(screen !== 'home');
 
   // leaving the board must drop the hold; otherwise a stale press blocks the next round
   if (screen !== 'play' && room && uid && room.live[uid]?.holding) {

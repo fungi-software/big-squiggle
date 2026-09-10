@@ -118,12 +118,20 @@ async function addPlayer(code: string, uid: string, name: string, keepState = fa
   await touch(code);
 }
 
-export async function leaveRoom(code: string, uid: string): Promise<void> {
+export async function leaveRoom(code: string, uid: string, room?: RoomSnapshot | null): Promise<void> {
   await Promise.all([
     remove(roomRef(code, `/players/${uid}`)),
     remove(roomRef(code, `/online/${uid}`)),
     remove(roomRef(code, `/live/${uid}`)),
   ]);
+
+  // the last one out takes the room with them, rather than leaving a husk holding a
+  // code nobody can use until it goes stale a day later
+  const others = room ? Object.keys(room.players).filter((u) => u !== uid) : ['unknown'];
+  if (others.length === 0) {
+    // only the host is allowed to; anyone else leaves it for the stale-claim to reap
+    await remove(roomRef(code, '/meta')).catch(() => {});
+  }
 }
 
 export function touch(code: string): Promise<void> {

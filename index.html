@@ -17,9 +17,32 @@
   <header class="masthead">
     <div class="brand">
       <h1>Big Squiggle</h1>
-      <p id="tagline">Everyone holds part of a sequence of shapes that nobody can easily describe, and all of you have to enter the whole thing.</p>
     </div>
-    <div class="roomtag" id="roomTag" hidden></div>
+
+    <div class="topright">
+      <div class="roomtag" id="roomTag" hidden></div>
+
+      <button class="doorbtn" id="doorBtn" hidden aria-label="Leave room" title="Leave room">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10 3H5.5A1.5 1.5 0 0 0 4 4.5v15A1.5 1.5 0 0 0 5.5 21H10"/>
+          <path d="M16 8.5l3.5 3.5L16 15.5"/>
+          <path d="M9 12h10.5"/>
+        </svg>
+      </button>
+
+      <div class="leaveask" id="leaveAsk" hidden>
+        <span>Leave?</span>
+        <button class="yes" id="leaveYes" aria-label="Yes, leave">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5.5 5.5L20 7"/></svg>
+        </button>
+        <button class="no" id="leaveNo" aria-label="Stay">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+    </div>
   </header>
 
   <!-- ================= HOME ================= -->
@@ -60,7 +83,6 @@
 
     <div class="btnrow">
       <button class="btn ghost" id="resumeBtn" hidden>End round</button>
-      <button class="btn ghost" id="leaveRoomBtn">Leave</button>
     </div>
 
     <p class="houserule-min">No chat or outside communication.</p>

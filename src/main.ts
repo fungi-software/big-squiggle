@@ -10,6 +10,7 @@ import { mountBoard } from './events';
 import { mountBrief } from './views/brief';
 import { mountHome } from './views/home';
 import { mountLobby } from './views/lobby';
+import { mountTopbar } from './views/topbar';
 
 /** `/r/RAVEN` is the whole invite. */
 function codeFromUrl(): string {
@@ -19,8 +20,9 @@ function codeFromUrl(): string {
 
 onChange(render);
 mountHome(render);
-mountLobby(render);
+mountLobby();
 mountBrief();
+mountTopbar(render);
 mountBoard(render);
 render();
 
