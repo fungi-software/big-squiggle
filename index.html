@@ -20,6 +20,7 @@
     </div>
 
     <div class="topright">
+      <div class="clock" id="clock" hidden></div>
       <div class="roomtag" id="roomTag" hidden></div>
 
       <button class="doorbtn" id="doorBtn" hidden aria-label="Leave room" title="Leave room">
@@ -48,6 +49,11 @@
   <!-- ================= HOME ================= -->
   <section id="homeView" hidden>
     <div class="home">
+      <div class="intro">
+        <p class="lede">A communication puzzle game for 2&ndash;8 players.</p>
+        <p class="sub">Play over a video call app like Zoom <b>with chat disabled</b>, and do not use any other external forms of communication.</p>
+      </div>
+
       <div class="field">
         <label for="nameInput">Name</label>
         <input type="text" id="nameInput" maxlength="24" autocomplete="nickname" spellcheck="false">

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  allBriefed, assignSeats, canStart, deriveScreen, isMember, isStale, nextHost,
+  allBriefed, assignSeats, canStart, deriveScreen, elapsedMs, formatDuration, isMember,
+  isNewBest, isStale, nextHost, solveBadge,
   onlineUids, puzzleKey, restrictionIndex, ROOM_TTL_MS, seatedUids, startBlocker,
   type RoomSnapshot,
 } from '../src/roomLogic';
@@ -262,5 +263,76 @@ describe('why start is locked', () => {
     });
     expect(startBlocker(dropped)).not.toBe(null);
     expect(canStart(dropped, 'a')).toBe(false);
+  });
+});
+
+describe('the clock', () => {
+  const meta = (over: Partial<RoomSnapshot['meta']> = {}) => ({ ...room().meta, ...over });
+
+  it('shows nothing before the board goes live', () => {
+    expect(elapsedMs(meta(), 5000)).toBe(null);
+  });
+
+  it('counts from the moment play started', () => {
+    expect(elapsedMs(meta({ playStartedAt: 1000 }), 4500)).toBe(3500);
+  });
+
+  it('freezes at the solve, so every device reports the same time', () => {
+    const m = meta({ playStartedAt: 1000, solvedAt: 61_000 });
+    expect(elapsedMs(m, 999_999)).toBe(60_000);
+  });
+
+  it('uses the local solve moment until the write lands', () => {
+    expect(elapsedMs(meta({ playStartedAt: 1000 }), 999_999, 4000)).toBe(3000);
+    // once recorded, the shared value wins over the local guess
+    expect(elapsedMs(meta({ playStartedAt: 1000, solvedAt: 5000 }), 999_999, 9999)).toBe(4000);
+  });
+
+  it('never runs backwards on a clock correction', () => {
+    expect(elapsedMs(meta({ playStartedAt: 9000 }), 1000)).toBe(0);
+  });
+
+  it('formats as minutes and padded seconds', () => {
+    expect(formatDuration(0)).toBe('0:00');
+    expect(formatDuration(9_000)).toBe('0:09');
+    expect(formatDuration(65_000)).toBe('1:05');
+    expect(formatDuration(600_000)).toBe('10:00');
+    expect(formatDuration(-50)).toBe('0:00');
+  });
+
+  it('treats any time as a best when there is none yet', () => {
+    expect(isNewBest(4000, undefined)).toBe(true);
+    expect(isNewBest(4000, 5000)).toBe(true);
+    expect(isNewBest(5000, 4000)).toBe(false);
+    expect(isNewBest(4000, 4000)).toBe(false);
+  });
+});
+
+describe('what the win panel says about the clock', () => {
+  it('calls a first solve a record', () => {
+    // the bug this exists for: reading the room's best back after the solve was written
+    // compares the time against itself, and nothing is ever a record
+    expect(solveBadge(39_000, true, undefined, 39_000)).toEqual({ time: 39_000, beat: true, compareTo: undefined });
+  });
+
+  it('names the mark it beat', () => {
+    expect(solveBadge(30_000, true, 45_000, 30_000)).toEqual({ time: 30_000, beat: true, compareTo: 45_000 });
+  });
+
+  it('shows the mark still to beat when the round was slower', () => {
+    expect(solveBadge(50_000, true, 30_000, 30_000)).toEqual({ time: 50_000, beat: false, compareTo: 30_000 });
+  });
+
+  it('claims nothing on a device that did not watch the solve', () => {
+    // after a refresh there is no before-picture, so it shows the time plainly
+    expect(solveBadge(39_000, false, undefined, 39_000)).toEqual({ time: 39_000, beat: false, compareTo: undefined });
+  });
+
+  it('does not offer a comparison against a slower record', () => {
+    expect(solveBadge(20_000, false, undefined, 45_000).compareTo).toBe(undefined);
+  });
+
+  it('says nothing at all before the board has run', () => {
+    expect(solveBadge(null, true, 1000, 1000)).toEqual({ time: null, beat: false });
   });
 });

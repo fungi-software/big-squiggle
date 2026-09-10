@@ -27,6 +27,15 @@
           "roundId": { ".validate": "newData.isNumber() && newData.val() > 0" },
           "playerCount": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 8" },
           "createdAt": { ".validate": "newData.isNumber()" },
+          "playStartedAt": { ".validate": "newData.isNumber()" },
+          "solvedAt": {
+            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists() && !data.exists()",
+            ".validate": "newData.isNumber()"
+          },
+          "bestMs": {
+            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists()",
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
           "$other": { ".validate": false }
         },
 

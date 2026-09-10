@@ -6,6 +6,7 @@ import { renderBrief } from './views/brief';
 import { renderHome } from './views/home';
 import { renderLobby } from './views/lobby';
 import { renderPlay } from './views/play';
+import { renderClock } from './views/clock';
 import { renderTopbar } from './views/topbar';
 
 const VIEWS: Record<Screen, string> = {
@@ -25,6 +26,7 @@ export function render(): void {
   }
   byId('roomTag').hidden = screen !== 'play';
   renderTopbar(screen !== 'home');
+  renderClock(screen === 'play');
 
   // leaving the board must drop the hold; otherwise a stale press blocks the next round
   if (screen !== 'play' && room && uid && room.live[uid]?.holding) {

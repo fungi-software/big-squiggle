@@ -10,6 +10,7 @@ import { mountBoard } from './events';
 import { mountBrief } from './views/brief';
 import { mountHome } from './views/home';
 import { mountLobby } from './views/lobby';
+import { mountClock } from './views/clock';
 import { mountTopbar } from './views/topbar';
 
 /** `/r/RAVEN` is the whole invite. */
@@ -23,6 +24,7 @@ mountHome(render);
 mountLobby();
 mountBrief();
 mountTopbar(render);
+mountClock();
 mountBoard(render);
 render();
 

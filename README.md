@@ -14,6 +14,8 @@ nobody can easily describe, and the whole table has to enter that same sequence.
    across the table through a medium you are partly cut off from.
 4. Fill all the positions, then everyone holds the button at the same time. It only
    grades while the whole table is pressing, and a miss tells nobody anything.
+5. The clock runs from the moment the board goes live until the table solves it, and
+   the room remembers its fastest.
 
 The puzzle is derived from the game code on each device — a matching code and player
 count produces the identical deal everywhere, with no server involved.

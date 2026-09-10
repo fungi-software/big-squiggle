@@ -18,6 +18,12 @@ export interface RoomMeta {
   playerCount: number;
   createdAt: number;
   lastActive: number;
+  /** Server time the board went live; the clock counts from here. */
+  playStartedAt?: number;
+  /** Server time the table solved it. Derived from the hold, not from a round trip. */
+  solvedAt?: number;
+  /** Fastest solve this room has managed. */
+  bestMs?: number;
 }
 
 export interface PlayerRow {
@@ -155,4 +161,54 @@ export function restrictionIndex(seat: number): number {
 /** The deal is seeded by room and round together, so a rematch is a fresh puzzle. */
 export function puzzleKey(code: string, roundId: number): string {
   return code + '#' + roundId;
+}
+
+/**
+ * How long the round has been running, or how long it took. Null before the board goes
+ * live, so a lobby shows no clock.
+ */
+export function elapsedMs(meta: RoomMeta, serverNow: number, localSolvedAt?: number): number | null {
+  if (!meta.playStartedAt) return null;
+  const end = meta.solvedAt ?? localSolvedAt ?? serverNow;
+  return Math.max(0, end - meta.playStartedAt);
+}
+
+export function formatDuration(ms: number): string {
+  const total = Math.floor(Math.max(0, ms) / 1000);
+  const mins = Math.floor(total / 60);
+  return mins + ':' + String(total % 60).padStart(2, '0');
+}
+
+export function isNewBest(elapsed: number, best: number | undefined): boolean {
+  return elapsed > 0 && (!best || elapsed < best);
+}
+
+export interface SolveBadge {
+  /** Show the time at all. */
+  time: number | null;
+  /** Mark it as a record. */
+  beat: boolean;
+  /** The mark it beat, or the mark still to beat. */
+  compareTo?: number;
+}
+
+/**
+ * What the win panel says about the clock.
+ *
+ * `prevBest` must be the room's record as it stood *before* this solve was written —
+ * reading it back off the room compares the time against itself and no solve is ever a
+ * record. And only a device that watched the solve happen can claim one: after a
+ * refresh there is nothing to compare against, so it shows the time plainly.
+ */
+export function solveBadge(
+  time: number | null,
+  watchedItHappen: boolean,
+  prevBest: number | undefined,
+  roomBest: number | undefined,
+): SolveBadge {
+  if (time == null) return { time: null, beat: false };
+
+  const beat = watchedItHappen && isNewBest(time, prevBest);
+  if (beat) return { time, beat: true, compareTo: prevBest };
+  return { time, beat: false, compareTo: roomBest && roomBest < time ? roomBest : undefined };
 }

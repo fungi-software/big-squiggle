@@ -1,5 +1,5 @@
 import {
-  get, onDisconnect, onValue, ref, remove, runTransaction, serverTimestamp, update,
+  get, onDisconnect, onValue, ref, remove, runTransaction, serverTimestamp, set, update,
   type Unsubscribe,
 } from 'firebase/database';
 
@@ -7,7 +7,7 @@ import { randomCode } from './codes';
 import { db } from './firebase';
 import { serverNow } from './presence';
 import {
-  assignSeats, isStale, MAX_PLAYERS, onlineUids,
+  assignSeats, isNewBest, isStale, MAX_PLAYERS, onlineUids,
   type RoomMeta, type RoomSnapshot,
 } from './roomLogic';
 
@@ -157,12 +157,18 @@ export function startRound(room: RoomSnapshot, roundId: number): Promise<void> {
     'meta/status': 'briefing',
     'meta/roundId': roundId,
     'meta/playerCount': Object.keys(seats).length,
+    'meta/playStartedAt': null,
+    'meta/solvedAt': null,
     'meta/lastActive': serverTimestamp(),
   });
 }
 
 export function beginPlay(code: string): Promise<void> {
-  return update(roomRef(code, '/meta'), { status: 'playing', lastActive: serverTimestamp() });
+  return update(roomRef(code, '/meta'), {
+    status: 'playing',
+    playStartedAt: serverTimestamp(),
+    lastActive: serverTimestamp(),
+  });
 }
 
 export function nextRound(room: RoomSnapshot): Promise<void> {
@@ -196,11 +202,27 @@ export function releaseHold(code: string, uid: string): Promise<void> {
   return update(roomRef(code, `/live/${uid}`), { holding: false });
 }
 
-/** Whoever sees the win first records it; the guard makes the race between them harmless. */
-export async function declareWon(code: string): Promise<void> {
+/**
+ * Whoever sees the win first records it; the guards make the race between them harmless.
+ *
+ * `solvedAt` is the moment the hold completed, which every device computes to the same
+ * server-clock value — using a fresh timestamp here would instead record whichever
+ * client's write landed first, and the table would disagree about its own time.
+ */
+export async function declareWon(
+  code: string,
+  solvedAt: number,
+  elapsedMs: number,
+  prevBest: number | undefined,
+): Promise<void> {
   await runTransaction(roomRef(code, '/meta/status'), (current: string | null) =>
     current === 'playing' ? 'won' : undefined,
   );
+  // rules let this land only while unset, so the first writer wins and the rest are denied
+  await set(roomRef(code, '/meta/solvedAt'), solvedAt).catch(() => {});
+  if (isNewBest(elapsedMs, prevBest)) {
+    await set(roomRef(code, '/meta/bestMs'), elapsedMs).catch(() => {});
+  }
 }
 
 export function shareLink(code: string): string {

@@ -2,12 +2,15 @@ import { fanfare } from '../confetti';
 import { byId } from '../dom';
 import { svgOf } from '../glyphs';
 import { restrictionIcon } from '../icons';
-import { attempt } from '../live';
+import { attempt, HOLD_MS } from '../live';
 import { serverNow } from '../presence';
 import { buildPuzzle, plateOrder, type Puzzle } from '../puzzle';
 import { RESTRICTIONS } from '../restrictions';
 import { declareWon } from '../room';
-import { isHost, puzzleKey, restrictionIndex, seatedUids, type RoomSnapshot } from '../roomLogic';
+import {
+  elapsedMs, formatDuration, isHost, puzzleKey, restrictionIndex, seatedUids, solveBadge,
+  type RoomSnapshot,
+} from '../roomLogic';
 import { firstOpen, restoreDraft, S, saveDraft } from '../state';
 
 /** The attempt already acted on, so a held button resolves once rather than every frame. */
@@ -16,6 +19,10 @@ let missUntil = 0;
 let ticker: number | null = null;
 /** Celebrate on our own reading rather than waiting for the write to come back. */
 let localWon: number | null = null;
+/** The solve moment as this device computed it, for the clock before the write lands. */
+let localSolvedAt: number | undefined;
+/** The room record as it stood before this solve, captured before the write moves it. */
+let localPrevBest: number | undefined;
 
 function puzzleOf(room: RoomSnapshot): Puzzle {
   return buildPuzzle(puzzleKey(room.code, room.meta.roundId), room.meta.playerCount);
@@ -31,6 +38,8 @@ export function resetAttempt(): void {
   settled = null;
   missUntil = 0;
   localWon = null;
+  localSolvedAt = undefined;
+  localPrevBest = undefined;
 }
 
 export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void): void {
@@ -126,7 +135,12 @@ function renderAttempt(room: RoomSnapshot, rerender: () => void): void {
     settled = state.startedAt!;
     if (state.won) {
       localWon = room.meta.roundId;
-      void declareWon(room.code);
+      // the hold finished HOLD_MS after the last press, on the shared server clock
+      const solvedAt = state.startedAt! + HOLD_MS;
+      localSolvedAt = solvedAt;
+      const took = elapsedMs(room.meta, serverNow(), solvedAt) ?? 0;
+      localPrevBest = room.meta.bestMs;
+      void declareWon(room.code, solvedAt, took, localPrevBest);
       fanfare(byId<HTMLCanvasElement>('confetti'));
       byId('holdRow').hidden = true;
       stopTicker();
@@ -170,7 +184,7 @@ function stopTicker(): void {
 function renderWin(room: RoomSnapshot, uid: string, P: Puzzle): void {
   const host = byId('verdictSlot');
   const over = room.meta.status === 'won' || localWon === room.meta.roundId;
-  const mode = over ? 'won:' + room.meta.roundId : 'idle';
+  const mode = over ? `won:${room.meta.roundId}:${room.meta.solvedAt ?? 0}:${room.meta.bestMs ?? 0}` : 'idle';
   if (host.dataset.mode === mode) return;
   host.dataset.mode = mode;
 
@@ -179,8 +193,22 @@ function renderWin(room: RoomSnapshot, uid: string, P: Puzzle): void {
     return;
   }
 
+  const badge = solveBadge(
+    elapsedMs(room.meta, serverNow(), localSolvedAt),
+    localWon === room.meta.roundId,
+    localPrevBest,
+    room.meta.bestMs,
+  );
+  const clock =
+    badge.time == null
+      ? ''
+      : '<div class="solvetime' + (badge.beat ? ' best' : '') + '">' + formatDuration(badge.time) + '</div>' +
+        (badge.compareTo
+          ? '<div class="prevbest">' + (badge.beat ? 'beat ' : 'best ') + formatDuration(badge.compareTo) + '</div>'
+          : '');
+
   host.innerHTML =
-    '<div class="verdict win"><h3>That is the squiggle!</h3>' +
+    '<div class="verdict win"><h3>That is the squiggle!</h3>' + clock +
     '<div class="answerrow">' +
     P.answer.map((g, i) => '<div style="animation-delay:' + i * 60 + 'ms">' + svgOf(g) + '</div>').join('') +
     '</div>' +
