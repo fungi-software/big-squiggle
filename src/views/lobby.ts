@@ -92,7 +92,9 @@ export function renderLobby(room: RoomSnapshot, uid: string): void {
   const modeLine = byId('modeLine');
   modeLine.hidden = midRound;
   modeLine.textContent =
-    mode === 'table' ? 'Nothing written or drawn, not even in the air.' : 'Turn chat off in your call app.';
+    mode === 'table'
+      ? 'Nothing written or drawn. Take care not to show your screen to other players.'
+      : 'Turn chat off in your call app.';
 
   const block = startBlocker(room);
   const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
