@@ -175,9 +175,22 @@ export function nextRound(room: RoomSnapshot): Promise<void> {
   return startRound(room, room.meta.roundId + 1);
 }
 
-/** Sends everyone back to the lobby — the way out when a player drops mid-round. */
-export function abandonRound(code: string): Promise<void> {
-  return update(roomRef(code, '/meta'), { status: 'lobby', lastActive: serverTimestamp() });
+/**
+ * Sends everyone back to the lobby — the way out when a player drops mid-round.
+ *
+ * The round number moves on even though nothing was solved, for two reasons: the next
+ * start deals a fresh puzzle rather than the one they half-saw, and the round-scoped
+ * ready flags stop matching, so the table has to agree to play again rather than the
+ * button arming itself.
+ */
+export function abandonRound(room: RoomSnapshot): Promise<void> {
+  return update(roomRef(room.code, '/meta'), {
+    status: 'lobby',
+    roundId: room.meta.roundId + 1,
+    playStartedAt: null,
+    solvedAt: null,
+    lastActive: serverTimestamp(),
+  });
 }
 
 /**

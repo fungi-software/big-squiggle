@@ -21,7 +21,7 @@
             ".validate": "newData.isNumber()"
           },
           "status": {
-            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists() && ((data.val() === 'playing' && newData.val() === 'won') || (data.val() === 'won' && newData.val() === 'briefing'))",
+            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists() && ((data.val() === 'playing' && newData.val() === 'won') || (data.val() === 'won' && newData.val() === 'briefing') || newData.val() === 'lobby')",
             ".validate": "newData.val().matches(/^(lobby|briefing|playing|won)$/)"
           },
           "roundId": {

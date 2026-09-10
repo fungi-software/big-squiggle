@@ -1,5 +1,5 @@
 import { byId } from '../dom';
-import { leaveRoom } from '../room';
+import { abandonRound, leaveRoom } from '../room';
 import type { RoundGap } from '../roomLogic';
 import { exitRoom, getRoom, getUid } from '../store';
 
@@ -25,6 +25,12 @@ function leave(rerender: () => void): void {
 
 export function mountTopbar(rerender: () => void): void {
   byId('gapLeave').addEventListener('click', () => leave(rerender));
+
+  // regrouping beats walking out: whoever is left can deal a fresh round
+  byId('gapLobby').addEventListener('click', () => {
+    const room = getRoom();
+    if (room) void abandonRound(room);
+  });
 
   byId('doorBtn').addEventListener('click', (e) => {
     e.stopPropagation();

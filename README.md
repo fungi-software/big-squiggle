@@ -51,7 +51,7 @@ src/
   store.ts          the live room snapshot and the transitions nobody presses
   render.ts         picks a screen from room status
   views/            home, lobby, brief, play
-  glyphs.ts         the 50 marks and their SVG
+  glyphs.ts         the 62 marks and their SVG
   puzzle.ts         the seeded deal — answer, plate, seat ownership
   random.ts         mulberry32 and friends
   codes.ts          game-code words, "RAVEN-5" token parsing

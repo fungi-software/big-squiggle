@@ -18,8 +18,8 @@ export const GLYPHS: readonly GlyphSpec[] = [
   /*H*/ '<path d="M45 18L45 82"/><path d="M45 38L67 38"/><path d="M45 62L57 62"/>',
   /*I*/ '<path d="M50 50A10 10 0 0 1 50 30A20 20 0 0 1 50 70A30 30 0 0 1 50 10"/>',
   /*J*/ {m:'<path d="M50 50A10 10 0 0 1 50 30A20 20 0 0 1 50 70A30 30 0 0 1 50 10"/>'},
-  /*K*/ '<path d="M50 22A29 29 0 0 1 50 78A29 29 0 0 1 50 22"/><circle cx="50" cy="39" r="5" fill="currentColor" stroke="none"/>',
-  /*L*/ '<path d="M50 22A29 29 0 0 1 50 78A29 29 0 0 1 50 22"/><circle cx="50" cy="61" r="5" fill="currentColor" stroke="none"/>',
+  /*K*/ '<path d="M50 50L50 38L64 38L64 64L36 64L36 24L78 24L78 78L22 78"/>',
+  /*L*/ {m:'<path d="M50 50L50 38L64 38L64 64L36 64L36 24L78 24L78 78L22 78"/>'},
   /*M*/ '<path d="M22 25H72"/><path d="M38 43H88"/><path d="M22 57H72"/><path d="M22 75H72"/>',
   /*N*/ '<path d="M22 25H72"/><path d="M22 43H72"/><path d="M38 57H88"/><path d="M22 75H72"/>',
   /*O*/ '<path d="M50 50L80 50"/><path d="M50 50L57.5 63"/><path d="M50 50L35 76"/><path d="M50 50L20 50"/><path d="M50 50L35 24"/><path d="M50 50L65 24"/>',
@@ -58,7 +58,20 @@ export const GLYPHS: readonly GlyphSpec[] = [
   /*u*/ '<rect x="22" y="22" width="56" height="56" rx="11"/><circle cx="50" cy="35" r="5" fill="currentColor" stroke="none"/>',
   /*v*/ '<rect x="22" y="22" width="56" height="56" rx="11"/><circle cx="50" cy="12" r="5" fill="currentColor" stroke="none"/>',
   /*w*/ '<path d="M14 68L26 36L38 68L50 22L62 68L74 36L86 68"/>',
-  /*x*/ '<path d="M14 68L26 36L38 68L50 50L62 68L74 36L86 68"/>'
+  /*x*/ '<path d="M14 68L26 36L38 68L50 50L62 68L74 36L86 68"/>',
+  /* twelve wackier marks, still built as near-twins so finding the family is not the answer */
+  /*aa*/ '<path d="M28 20H72L28 80H72Z"/><circle cx="50" cy="32" r="5" fill="currentColor" stroke="none"/>',
+  /*ab*/ '<path d="M28 20H72L28 80H72Z"/><circle cx="50" cy="68" r="5" fill="currentColor" stroke="none"/>',
+  /*ac*/ '<path d="M12 62C22 40 34 40 42 56C48 68 62 66 60 50C58 38 44 40 46 58C48 76 68 78 88 54"/>',
+  /*ad*/ {m:'<path d="M12 62C22 40 34 40 42 56C48 68 62 66 60 50C58 38 44 40 46 58C48 76 68 78 88 54"/>'},
+  /*ae*/ '<path d="M32 16V84"/><path d="M68 16V84"/><path d="M32 34H68"/><path d="M32 50H52"/><path d="M32 66H68"/>',
+  /*af*/ '<path d="M32 16V84"/><path d="M68 16V84"/><path d="M32 34H68"/><path d="M32 50H68"/><path d="M32 66H52"/>',
+  /*ag*/ '<path d="M34 14V86"/><path d="M34 24L76 37L34 50Z"/>',
+  /*ah*/ '<path d="M34 14V86"/><path d="M34 50L76 63L34 76Z"/>',
+  /*ai*/ '<path d="M16 62A15 15 0 0 1 46 62A15 15 0 0 1 76 62"/><path d="M16 62H86"/>',
+  /*aj*/ '<path d="M16 42A15 15 0 0 0 46 42A15 15 0 0 0 76 42"/><path d="M16 42H86"/>',
+  /*ak*/ '<path d="M20 78H44V58H64V38H84"/>',
+  /*al*/ {m:'<path d="M20 78H44V58H64V38H84"/>'},
 ];
 export const GLYPH_COUNT = GLYPHS.length;
 export const PAIR_COUNT = GLYPH_COUNT / 2;

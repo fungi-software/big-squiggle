@@ -22,7 +22,7 @@ export function mountLobby(): void {
 
   byId('resumeBtn').addEventListener('click', () => {
     const room = getRoom();
-    if (room) void abandonRound(room.code);
+    if (room) void abandonRound(room);
   });
 
   byId('roomCode').addEventListener('click', function () {
