@@ -51,8 +51,14 @@ Two deliberate splits:
 
 **`seats` is separate from `players`** because RTDB rules cascade — a rule granting a
 player write access to their own `players/{uid}` node cannot then carve out a child they
-may not touch. Seats live where only the host can write them, so nobody assigns
-themselves the seat they want.
+may not touch. Seats live in their own node, written as one atomic map rather than
+per-player, so a round is dealt in a single indivisible move.
+
+Any member may deal a round, not just the host: waiting on one person to notice the
+rematch button is a poor way to end a game. That does mean a determined player could
+write themselves a chosen seat — but the answer already sits in their page, so this
+guards nothing that was not already open. If grading ever moves into a Function, seat
+assignment goes back behind it.
 
 **`live` is separate from `players`** because it churns and `players` does not. It is
 also the only node wired to `onDisconnect`, so a dropped connection clears a hold and a

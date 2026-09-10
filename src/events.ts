@@ -1,6 +1,5 @@
 import { byId } from './dom';
 import { nextRound, pressHold, releaseHold } from './room';
-import { isHost } from './roomLogic';
 import { firstOpen, place, resetBoard, S } from './state';
 import { getRoom, getUid } from './store';
 import { isMine, resetAttempt } from './views/play';
@@ -168,9 +167,10 @@ export function mountBoard(rerender: () => void): void {
   byId('verdictSlot').addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
     if (!b || b.dataset.act !== 'newround') return;
+    // anyone at the table can call the rematch; waiting on one person to notice the
+    // button is a poor way to end a game
     const room = getRoom();
-    const uid = getUid();
-    if (!room || !isHost(room, uid)) return;
+    if (!room) return;
     resetBoard();
     resetAttempt();
     void nextRound(room);

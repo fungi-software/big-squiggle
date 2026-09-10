@@ -8,7 +8,7 @@ import { buildPuzzle, plateOrder, type Puzzle } from '../puzzle';
 import { RESTRICTIONS } from '../restrictions';
 import { declareWon } from '../room';
 import {
-  elapsedMs, formatDuration, isHost, puzzleKey, restrictionIndex, seatedUids, solveBadge,
+  elapsedMs, formatDuration, puzzleKey, restrictionIndex, seatedUids, solveBadge,
   type RoomSnapshot,
 } from '../roomLogic';
 import { firstOpen, restoreDraft, S, saveDraft } from '../state';
@@ -111,7 +111,7 @@ export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void
 
   saveDraft(stamp);
   renderAttempt(room, rerender);
-  renderWin(room, uid);
+  renderWin(room);
 }
 
 /**
@@ -181,7 +181,7 @@ function stopTicker(): void {
   }
 }
 
-function renderWin(room: RoomSnapshot, uid: string): void {
+function renderWin(room: RoomSnapshot): void {
   const host = byId('verdictSlot');
   const over = room.meta.status === 'won' || localWon === room.meta.roundId;
   const mode = over ? `won:${room.meta.roundId}:${room.meta.solvedAt ?? 0}:${room.meta.bestMs ?? 0}` : 'idle';
@@ -210,8 +210,6 @@ function renderWin(room: RoomSnapshot, uid: string): void {
 
   host.innerHTML =
     '<div class="verdict win"><h3>That is the squiggle!</h3>' + clock +
-    (isHost(room, uid)
-      ? '<div class="btnrow"><button class="btn primary" data-act="newround">Next round</button></div>'
-      : '') +
+    '<div class="btnrow"><button class="btn primary" data-act="newround">Play again</button></div>' +
     '</div>';
 }

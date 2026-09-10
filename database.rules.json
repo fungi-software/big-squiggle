@@ -21,15 +21,24 @@
             ".validate": "newData.isNumber()"
           },
           "status": {
-            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists() && data.val() === 'playing' && newData.val() === 'won'",
+            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists() && ((data.val() === 'playing' && newData.val() === 'won') || (data.val() === 'won' && newData.val() === 'briefing'))",
             ".validate": "newData.val().matches(/^(lobby|briefing|playing|won)$/)"
           },
-          "roundId": { ".validate": "newData.isNumber() && newData.val() > 0" },
-          "playerCount": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 8" },
+          "roundId": {
+            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists()",
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          "playerCount": {
+            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists()",
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 8"
+          },
           "createdAt": { ".validate": "newData.isNumber()" },
-          "playStartedAt": { ".validate": "newData.isNumber()" },
+          "playStartedAt": {
+            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists()",
+            ".validate": "newData.isNumber()"
+          },
           "solvedAt": {
-            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists() && !data.exists()",
+            ".write": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists() && (!data.exists() || !newData.exists())",
             ".validate": "newData.isNumber()"
           },
           "bestMs": {
@@ -57,7 +66,7 @@
 
         "seats": {
           ".read": "auth != null && root.child('rooms').child($code).child('players').child(auth.uid).exists()",
-          ".write": "auth != null && root.child('rooms').child($code).child('meta').child('hostUid').val() === auth.uid",
+          ".write": "auth != null && (root.child('rooms').child($code).child('players').child(auth.uid).exists() || root.child('rooms').child($code).child('meta').child('hostUid').val() === auth.uid)",
           "$uid": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 7" }
         },
 
