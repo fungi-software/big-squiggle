@@ -47,7 +47,6 @@ export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void
   const seat = room.seats[uid] ?? 0;
   const ri = restrictionForSeat(room, seat);
 
-  byId('roomTag').textContent = room.code;
   byId('restrictIcon').innerHTML = restrictionIcon(ri);
   byId('restrictIcon').setAttribute('title', RESTRICTIONS[ri]!.t);
 

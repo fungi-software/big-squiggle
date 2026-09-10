@@ -24,7 +24,7 @@ export function render(): void {
   for (const [name, id] of Object.entries(VIEWS)) {
     byId(id).hidden = name !== screen;
   }
-  byId('roomTag').hidden = screen !== 'play';
+  byId('restrictIcon').hidden = screen !== 'play';
   renderTopbar(screen !== 'home');
   renderClock(screen === 'play');
   renderGap(room && screen !== 'home' ? roundGap(room) : null);
