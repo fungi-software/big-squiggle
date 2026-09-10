@@ -124,3 +124,27 @@ describe('resolution', () => {
     expect(after).not.toBe(before);
   });
 });
+
+describe('a table that lost someone', () => {
+  it('refuses to resolve when fewer seats remain than the round was dealt for', () => {
+    // the bug this exists for: players walking out shrank the requirement until whoever
+    // was left could solve the whole table's puzzle alone
+    const rows = allDown(NOW - HOLD_MS);
+    const soloLeft = attempt(['a'], { a: rows.a! }, NOW, 3);
+    expect(soloLeft.phase).toBe('idle');
+    expect(soloLeft.progress).toBe(0);
+  });
+
+  it('will not even charge for a short table', () => {
+    const rows = allDown(NOW);
+    expect(attempt(['a', 'b'], { a: rows.a!, b: rows.b! }, NOW, 3).phase).toBe('idle');
+  });
+
+  it('still resolves when the whole dealt table is present', () => {
+    expect(attempt(seated, allDown(NOW - HOLD_MS), NOW, 3).phase).toBe('resolved');
+  });
+
+  it('defaults to the seats it was given, so callers cannot forget the count', () => {
+    expect(attempt(seated, allDown(NOW - HOLD_MS), NOW).phase).toBe('resolved');
+  });
+});

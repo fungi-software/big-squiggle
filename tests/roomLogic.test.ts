@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   allBriefed, assignSeats, canStart, deriveScreen, elapsedMs, formatDuration, isMember,
-  isNewBest, isStale, nextHost, solveBadge,
+  isNewBest, isStale, nextHost, roundGap, solveBadge,
   onlineUids, puzzleKey, restrictionsForRound, ROOM_TTL_MS, seatedUids, startBlocker,
   type RoomSnapshot,
 } from '../src/roomLogic';
@@ -378,5 +378,49 @@ describe('what the win panel says about the clock', () => {
 
   it('says nothing at all before the board has run', () => {
     expect(solveBadge(null, true, 1000, 1000)).toEqual({ time: null, beat: false });
+  });
+});
+
+describe('spotting a hole in the round', () => {
+  const playing = (over: Partial<RoomSnapshot> = {}) =>
+    room({ meta: { ...room().meta, status: 'playing', playerCount: 3 }, seats: { a: 0, b: 1, c: 2 }, ...over });
+
+  it('says nothing while the table is whole', () => {
+    expect(roundGap(playing())).toBe(null);
+  });
+
+  it('says nothing in the lobby, where leaving is normal', () => {
+    expect(roundGap(room({ seats: { a: 0, b: 1, c: 2 }, online: { a: true } }))).toBe(null);
+  });
+
+  it('counts someone who left the room outright', () => {
+    const r = playing({
+      players: { a: { name: 'Ana', joinedAt: 10 }, b: { name: 'Bo', joinedAt: 20 } },
+      online: { a: true, b: true },
+    });
+    expect(roundGap(r)).toEqual({ missing: 1, left: 1, away: 0 });
+  });
+
+  it('counts someone who merely dropped off, separately', () => {
+    expect(roundGap(playing({ online: { a: true, b: true } }))).toEqual({ missing: 1, left: 0, away: 1 });
+  });
+
+  it('adds both kinds of absence together', () => {
+    const r = playing({
+      players: { a: { name: 'Ana', joinedAt: 10 }, b: { name: 'Bo', joinedAt: 20 } },
+      online: { a: true },
+    });
+    expect(roundGap(r)).toEqual({ missing: 2, left: 1, away: 1 });
+  });
+
+  it('clears itself once they reconnect', () => {
+    const away = playing({ online: { a: true, b: true } });
+    expect(roundGap(away)).not.toBe(null);
+    expect(roundGap(playing())).toBe(null);
+  });
+
+  it('watches the briefing too, where the gate would never open', () => {
+    const r = playing({ meta: { ...room().meta, status: 'briefing', playerCount: 3 }, online: { a: true, b: true } });
+    expect(roundGap(r)?.away).toBe(1);
   });
 });

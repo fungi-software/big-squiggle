@@ -268,8 +268,9 @@ Ships: the moment the plan set out to buy. Everyone learns together, at the same
   wants to cheat can agree that one long pulse means something. Nothing short of hiding
   the indicator closes it, and hiding it costs more than it saves.
 - **A permanent drop kills the round.** The absent player's given slots are unrecoverable,
-  so the host needs an abandon control that returns everyone to the lobby. A player who
-  drops and comes back keeps their seat, because the anonymous uid persists.
+  so the table is told and offered the way out rather than left holding an unsolvable
+  board. A player who drops and comes back keeps their seat, because the anonymous uid
+  persists, and the notice clears itself when they do.
 - **No scheduled cleanup without Functions.** Rooms are reaped opportunistically: creating
   a room whose code exists but has been idle over 24h claims it. Dead rooms cost bytes
   until someone rolls their code again.

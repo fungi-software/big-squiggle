@@ -94,6 +94,32 @@ export function canStart(room: RoomSnapshot, uid: string): boolean {
   return present.every((u) => isReady(room, u));
 }
 
+export interface RoundGap {
+  /** Seats dealt this round with nobody in them. */
+  missing: number;
+  /** Gone for good — they left the room. */
+  left: number;
+  /** Still members, just not connected; presence may bring them back. */
+  away: number;
+}
+
+/**
+ * Who is missing from a round in progress. Null when the table is whole, or when no
+ * round is running.
+ */
+export function roundGap(room: RoomSnapshot): RoundGap | null {
+  if (room.meta.status !== 'briefing' && room.meta.status !== 'playing') return null;
+
+  let left = 0;
+  let away = 0;
+  for (const uid of Object.keys(room.seats)) {
+    if (!room.players[uid]) left++;
+    else if (!room.online[uid]) away++;
+  }
+  const missing = left + away;
+  return missing ? { missing, left, away } : null;
+}
+
 /** Why the host cannot start yet — so a dead button can say what it is waiting for. */
 export type StartBlock =
   | { kind: 'too-few' }

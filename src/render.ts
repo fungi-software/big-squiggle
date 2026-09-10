@@ -1,13 +1,13 @@
 import { byId } from './dom';
 import { releaseHold } from './room';
-import { deriveScreen, type Screen } from './roomLogic';
+import { deriveScreen, roundGap, type Screen } from './roomLogic';
 import { getRoom, getUid } from './store';
 import { renderBrief } from './views/brief';
 import { renderHome } from './views/home';
 import { renderLobby } from './views/lobby';
 import { renderPlay } from './views/play';
 import { renderClock } from './views/clock';
-import { renderTopbar } from './views/topbar';
+import { renderGap, renderTopbar } from './views/topbar';
 
 const VIEWS: Record<Screen, string> = {
   home: 'homeView',
@@ -27,6 +27,7 @@ export function render(): void {
   byId('roomTag').hidden = screen !== 'play';
   renderTopbar(screen !== 'home');
   renderClock(screen === 'play');
+  renderGap(room && screen !== 'home' ? roundGap(room) : null);
 
   // leaving the board must drop the hold; otherwise a stale press blocks the next round
   if (screen !== 'play' && room && uid && room.live[uid]?.holding) {

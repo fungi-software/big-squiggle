@@ -30,12 +30,15 @@ export function attempt(
   seated: string[],
   live: Record<string, LiveRow>,
   serverNow: number,
+  expected: number = seated.length,
 ): AttemptState {
   const total = seated.length;
   const rows = seated.map((uid) => live[uid]);
   const down = rows.filter((r) => r?.holding);
 
-  if (total === 0 || down.length !== total) {
+  // `expected` is the headcount the round was dealt for. Without it, players walking out
+  // shrinks the requirement until whoever is left can solve the table's puzzle alone.
+  if (total === 0 || total !== expected || down.length !== total) {
     return { phase: 'idle', down: down.length, total, progress: 0 };
   }
 

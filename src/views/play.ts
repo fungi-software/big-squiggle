@@ -8,7 +8,7 @@ import { buildPuzzle, plateOrder, type Puzzle } from '../puzzle';
 import { RESTRICTIONS } from '../restrictions';
 import { declareWon } from '../room';
 import {
-  elapsedMs, formatDuration, puzzleKey, restrictionForSeat, seatedUids, solveBadge,
+  elapsedMs, formatDuration, puzzleKey, restrictionForSeat, roundGap, seatedUids, solveBadge,
   type RoomSnapshot,
 } from '../roomLogic';
 import { firstOpen, restoreDraft, S, saveDraft } from '../state';
@@ -127,7 +127,15 @@ function renderAttempt(room: RoomSnapshot, rerender: () => void): void {
   }
 
   const seated = seatedUids(room);
-  const state = attempt(seated, room.live, serverNow());
+  // the round was dealt for this many; anything less and it cannot be validated at all
+  const state = attempt(seated, room.live, serverNow(), room.meta.playerCount);
+
+  // no point offering a control that can never resolve
+  if (roundGap(room)) {
+    byId('holdRow').hidden = true;
+    stopTicker();
+    return;
+  }
 
   // Act on a resolution, then paint this same frame with the result. Re-rendering from
   // inside a render pass instead left the win screen unpainted until the next snapshot.

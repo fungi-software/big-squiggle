@@ -1,5 +1,6 @@
 import { byId } from '../dom';
 import { leaveRoom } from '../room';
+import type { RoundGap } from '../roomLogic';
 import { exitRoom, getRoom, getUid } from '../store';
 
 /**
@@ -13,7 +14,18 @@ function ask(open: boolean): void {
   if (open) byId('leaveNo').focus();
 }
 
+function leave(rerender: () => void): void {
+  const room = getRoom();
+  const uid = getUid();
+  if (room && uid) void leaveRoom(room.code, uid, room);
+  exitRoom();
+  ask(false);
+  rerender();
+}
+
 export function mountTopbar(rerender: () => void): void {
+  byId('gapLeave').addEventListener('click', () => leave(rerender));
+
   byId('doorBtn').addEventListener('click', (e) => {
     e.stopPropagation();
     ask(true);
@@ -21,14 +33,7 @@ export function mountTopbar(rerender: () => void): void {
 
   byId('leaveNo').addEventListener('click', () => ask(false));
 
-  byId('leaveYes').addEventListener('click', () => {
-    const room = getRoom();
-    const uid = getUid();
-    if (room && uid) void leaveRoom(room.code, uid, room);
-    exitRoom();
-    ask(false);
-    rerender();
-  });
+  byId('leaveYes').addEventListener('click', () => leave(rerender));
 
   // anywhere else, or Escape, means no
   document.addEventListener('click', (e) => {
@@ -38,6 +43,19 @@ export function mountTopbar(rerender: () => void): void {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !byId('leaveAsk').hidden) ask(false);
   });
+}
+
+function plural(n: number, one: string, many: string): string {
+  return n === 1 ? one : many;
+}
+
+/** Says who is missing and offers the way out; disappears if they reconnect. */
+export function renderGap(gap: RoundGap | null): void {
+  byId('roundGap').hidden = !gap;
+  if (!gap) return;
+  byId('gapText').textContent = gap.left
+    ? plural(gap.left, 'A player left the game.', `${gap.left} players left the game.`)
+    : plural(gap.away, 'A player lost connection.', `${gap.away} players lost connection.`);
 }
 
 export function renderTopbar(inRoom: boolean): void {
