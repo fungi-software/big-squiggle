@@ -182,15 +182,14 @@ describe('host migration', () => {
 });
 
 describe('round derivation', () => {
-  it('rotates restrictions with the round', () => {
-    expect(restrictionIndex(0, 1)).not.toBe(restrictionIndex(0, 2));
-    for (let seat = 0; seat < 8; seat++) {
-      for (let round = 1; round < 10; round++) {
-        const i = restrictionIndex(seat, round);
-        expect(i).toBeGreaterThanOrEqual(0);
-        expect(i).toBeLessThan(3);
-      }
-    }
+  it('walks the restrictions in a fixed cycle down the seats', () => {
+    expect([0, 1, 2, 3, 4, 5, 6, 7].map(restrictionIndex)).toEqual([0, 1, 2, 0, 1, 2, 0, 1]);
+  });
+
+  it('gives a seat the same restriction every round', () => {
+    // the pattern is a property of where you sit, not of which round it is
+    expect(restrictionIndex(4)).toBe(restrictionIndex(4));
+    expect(restrictionIndex(0)).toBe(restrictionIndex(3));
   });
   it('reseeds the deal per round', () => {
     expect(puzzleKey('RAVEN', 1)).not.toBe(puzzleKey('RAVEN', 2));

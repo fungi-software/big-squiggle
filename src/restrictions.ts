@@ -5,9 +5,9 @@ export interface Restriction {
 }
 
 export const RESTRICTIONS: readonly Restriction[] = [
-  { t: 'Camera off', d: 'Your video is off. You can still talk, and you can see and hear everyone else.' },
-  { t: 'Microphone off', d: 'You are muted. You can still be seen, and you can see and hear everyone else.' },
-  { t: 'Sound off', d: 'Your speakers are off. You can still talk and be seen, and you can see everyone, but you cannot hear a word.' },
+  { t: 'Camera off', d: 'Turn your camera off. You can still talk, and hear everyone.' },
+  { t: 'Microphone off', d: 'Mute your microphone. You can still be seen, and hear everyone.' },
+  { t: 'Sound off', d: 'Turn your speakers off. You can still talk, and be seen.' },
 ];
 
 export function restrictionFor(seat: number): Restriction {

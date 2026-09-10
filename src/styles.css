@@ -214,23 +214,40 @@ input:focus,select:focus{outline:2.5px solid var(--accent);outline-offset:1px;bo
   border-radius:0 0 12px 12px}
 
 /* ---------- hold to validate ---------- */
-.holdrow{display:flex;flex-direction:column;align-items:center;gap:11px}
-.holdpill{position:relative;width:min(320px,100%);height:58px;border-radius:999px;overflow:hidden;
-  background:var(--surface-2);border:1.5px solid var(--line-strong);color:var(--ink-3);
+.holdrow{display:flex;flex-direction:column;align-items:center;gap:12px}
+.holdpill{position:relative;width:min(320px,100%);height:64px;border-radius:999px;overflow:hidden;
+  background:var(--surface-2);border:2px solid var(--line-strong);color:var(--ink-3);
   display:grid;place-items:center;touch-action:none;user-select:none;
-  transition:border-color .15s,color .15s,transform .09s}
-.holdpill:hover{border-color:var(--accent)}
-.holdpill:active{transform:scale(.985)}
+  transition:border-color .15s,color .15s,transform .12s,box-shadow .18s}
+.holdpill:hover{border-color:var(--accent);color:var(--ink-2)}
+.holdpill:active{transform:scale(.99)}
+
+/* the meter is the loud part: a solid sweep, not a tint */
 .holdpill .fill{position:absolute;inset:0;transform-origin:left center;transform:scaleX(0);
-  background:var(--accent-soft);border-radius:999px}
-.holdpill.charging{border-color:var(--accent);color:var(--accent)}
-.holdpill .tick{position:relative;width:25px;height:25px}
+  background:var(--accent);border-radius:999px}
+.holdpill .tick{position:relative;z-index:1;width:28px;height:28px;transition:color .12s,transform .12s}
+
+.holdpill.charging{border-color:var(--accent);color:var(--accent);transform:scale(1.04);
+  box-shadow:0 0 0 5px var(--accent-soft),0 10px 28px -10px var(--accent);
+  animation:holdPulse .9s ease-in-out infinite}
+@keyframes holdPulse{
+  0%,100%{box-shadow:0 0 0 5px var(--accent-soft),0 10px 28px -10px var(--accent)}
+  50%{box-shadow:0 0 0 10px var(--accent-soft),0 10px 30px -8px var(--accent)}
+}
+/* once the sweep passes the middle the tick sits on solid colour and has to invert */
+.holdpill.charging.past-half .tick{color:var(--accent-ink);transform:scale(1.15)}
+
 .holdpill.miss{animation:shake .42s cubic-bezier(.36,.07,.19,.97);border-color:var(--warn);color:var(--warn)}
 .holdpill.miss .fill{background:var(--warn-soft)}
 @keyframes shake{
   10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)}
   30%,50%,70%{transform:translateX(-7px)} 40%,60%{transform:translateX(7px)}
 }
+
+/* the pips grow as they light, so a glance catches how many of the table are down */
+.pips .pip{transition:background .18s,border-color .18s,transform .18s}
+#holdPips .pip{width:12px;height:12px}
+#holdPips .pip.on{transform:scale(1.35);box-shadow:0 0 0 3px var(--accent-soft)}
 
 /* ---------- leaving ---------- */
 .topright{display:flex;align-items:center;gap:10px}

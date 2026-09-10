@@ -15,9 +15,9 @@ export function mountBrief(): void {
 
 export function renderBrief(room: RoomSnapshot, uid: string): void {
   const seat = room.seats[uid] ?? 0;
-  const restriction = RESTRICTIONS[restrictionIndex(seat, room.meta.roundId)]!;
+  const restriction = RESTRICTIONS[restrictionIndex(seat)]!;
 
-  byId('briefIcon').innerHTML = restrictionIcon(restrictionIndex(seat, room.meta.roundId));
+  byId('briefIcon').innerHTML = restrictionIcon(restrictionIndex(seat));
   byId('briefTitle').textContent = restriction.t;
   byId('briefDesc').textContent = restriction.d;
 

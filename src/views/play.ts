@@ -36,7 +36,7 @@ export function resetAttempt(): void {
 export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void): void {
   const P = puzzleOf(room);
   const seat = room.seats[uid] ?? 0;
-  const ri = restrictionIndex(seat, room.meta.roundId);
+  const ri = restrictionIndex(seat);
 
   byId('roomTag').textContent = room.code;
   byId('restrictIcon').innerHTML = restrictionIcon(ri);
@@ -143,6 +143,8 @@ function renderAttempt(room: RoomSnapshot, rerender: () => void): void {
   const spent = state.phase === 'resolved' && state.startedAt === settled;
   byId('holdFill').style.transform = `scaleX(${spent ? 0 : state.progress})`;
   pill.classList.toggle('charging', state.phase === 'charging');
+  // the sweep covers the tick past the midpoint, so it has to flip to stay readable
+  pill.classList.toggle('past-half', state.phase === 'charging' && state.progress >= 0.5);
   pill.classList.toggle('miss', Date.now() < missUntil);
 
   if (state.phase === 'charging' || Date.now() < missUntil) startTicker(rerender);

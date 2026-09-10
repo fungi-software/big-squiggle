@@ -143,9 +143,13 @@ export function nextHost(room: RoomSnapshot): string | null {
   return onlineUids(room)[0] ?? null;
 }
 
-/** Restrictions rotate with the round, so the same seat is not deaf every game. */
-export function restrictionIndex(seat: number, roundId: number): number {
-  return (seat + roundId) % RESTRICTIONS.length;
+/**
+ * Seats cycle through the restrictions in a fixed order — seat 1 camera, seat 2
+ * microphone, seat 3 sound, seat 4 camera again. Predictable on purpose: the table can
+ * see how the constraints are distributed without anyone having to say.
+ */
+export function restrictionIndex(seat: number): number {
+  return seat % RESTRICTIONS.length;
 }
 
 /** The deal is seeded by room and round together, so a rematch is a fresh puzzle. */
