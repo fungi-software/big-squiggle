@@ -9,7 +9,3 @@ export const RESTRICTIONS: readonly Restriction[] = [
   { t: 'Microphone off', d: 'Mute your microphone. You can still be seen, and hear everyone.' },
   { t: 'Sound off', d: 'Turn your speakers off. You can still talk, and be seen.' },
 ];
-
-export function restrictionFor(seat: number): Restriction {
-  return RESTRICTIONS[seat % RESTRICTIONS.length]!;
-}

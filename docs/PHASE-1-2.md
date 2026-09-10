@@ -68,10 +68,13 @@ presence flag without touching anyone's name or ready state.
 and the key, and re-use is handled by the stale-claim transaction below.
 
 The deal is unchanged code — `buildPuzzle(CODE + '#' + roundId, playerCount)` — so a new
-round is a new deal for free. Restrictions follow the seats in a fixed cycle —
-`seat % 3`, so seat 1 is camera-off, seat 2 microphone-off, seat 3 sound-off, seat 4
-camera-off again — and stay put between rounds, because a predictable spread is
-something the table can reason about without discussing it.
+round is a new deal for free. Restrictions are dealt the same way — shuffled from a seed
+made of the room and the round, so every device deals the same hand without asking, and
+nobody is stuck with the same handicap twice.
+
+A table of two never draws sound-off: with one other person on the call, a player who
+cannot hear has no way back into the conversation. Three or more share all three,
+spread as evenly as the headcount allows.
 
 ## Security rules
 

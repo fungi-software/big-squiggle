@@ -8,7 +8,7 @@ import { buildPuzzle, plateOrder, type Puzzle } from '../puzzle';
 import { RESTRICTIONS } from '../restrictions';
 import { declareWon } from '../room';
 import {
-  elapsedMs, formatDuration, puzzleKey, restrictionIndex, seatedUids, solveBadge,
+  elapsedMs, formatDuration, puzzleKey, restrictionForSeat, seatedUids, solveBadge,
   type RoomSnapshot,
 } from '../roomLogic';
 import { firstOpen, restoreDraft, S, saveDraft } from '../state';
@@ -45,7 +45,7 @@ export function resetAttempt(): void {
 export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void): void {
   const P = puzzleOf(room);
   const seat = room.seats[uid] ?? 0;
-  const ri = restrictionIndex(seat);
+  const ri = restrictionForSeat(room, seat);
 
   byId('roomTag').textContent = room.code;
   byId('restrictIcon').innerHTML = restrictionIcon(ri);

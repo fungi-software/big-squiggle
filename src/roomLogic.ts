@@ -6,6 +6,8 @@
  * finished briefing — are testable without a database.
  */
 import type { LiveRow } from './live';
+import { seedFrom } from './puzzle';
+import { mulberry32, shuffled } from './random';
 import { RESTRICTIONS } from './restrictions';
 
 export type RoomStatus = 'lobby' | 'briefing' | 'playing' | 'won';
@@ -150,12 +152,23 @@ export function nextHost(room: RoomSnapshot): string | null {
 }
 
 /**
- * Seats cycle through the restrictions in a fixed order — seat 1 camera, seat 2
- * microphone, seat 3 sound, seat 4 camera again. Predictable on purpose: the table can
- * see how the constraints are distributed without anyone having to say.
+ * Restrictions are dealt fresh every round, evenly and at random.
+ *
+ * A two-player table never draws sound-off: with only one other person on the call, a
+ * player who cannot hear has no way back into the conversation. Three or more share all
+ * three, spread as evenly as the headcount allows.
+ *
+ * Seeded from the room and round so every device deals the same hand without asking.
  */
-export function restrictionIndex(seat: number): number {
-  return seat % RESTRICTIONS.length;
+export function restrictionsForRound(code: string, roundId: number, playerCount: number): number[] {
+  const kinds = playerCount < 3 ? 2 : RESTRICTIONS.length;
+  const pool: number[] = [];
+  for (let i = 0; i < playerCount; i++) pool.push(i % kinds);
+  return shuffled(pool, mulberry32(seedFrom(code + 'R' + roundId, playerCount)));
+}
+
+export function restrictionForSeat(room: RoomSnapshot, seat: number): number {
+  return restrictionsForRound(room.code, room.meta.roundId, room.meta.playerCount)[seat] ?? 0;
 }
 
 /** The deal is seeded by room and round together, so a rematch is a fresh puzzle. */

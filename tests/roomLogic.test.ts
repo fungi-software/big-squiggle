@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   allBriefed, assignSeats, canStart, deriveScreen, elapsedMs, formatDuration, isMember,
   isNewBest, isStale, nextHost, solveBadge,
-  onlineUids, puzzleKey, restrictionIndex, ROOM_TTL_MS, seatedUids, startBlocker,
+  onlineUids, puzzleKey, restrictionsForRound, ROOM_TTL_MS, seatedUids, startBlocker,
   type RoomSnapshot,
 } from '../src/roomLogic';
 
@@ -183,15 +183,59 @@ describe('host migration', () => {
 });
 
 describe('round derivation', () => {
-  it('walks the restrictions in a fixed cycle down the seats', () => {
-    expect([0, 1, 2, 3, 4, 5, 6, 7].map(restrictionIndex)).toEqual([0, 1, 2, 0, 1, 2, 0, 1]);
+  it('never deals sound-off to a table of two', () => {
+    // with one other person on the call, a player who cannot hear has no way back in
+    for (let round = 1; round <= 40; round++) {
+      const hand = restrictionsForRound('RAVEN', round, 2);
+      expect(hand).toHaveLength(2);
+      expect(hand).not.toContain(2);
+      expect([...hand].sort()).toEqual([0, 1]);
+    }
   });
 
-  it('gives a seat the same restriction every round', () => {
-    // the pattern is a property of where you sit, not of which round it is
-    expect(restrictionIndex(4)).toBe(restrictionIndex(4));
-    expect(restrictionIndex(0)).toBe(restrictionIndex(3));
+  it('swaps which of the two carries which handicap', () => {
+    const hands = new Set<string>();
+    for (let round = 1; round <= 40; round++) hands.add(restrictionsForRound('RAVEN', round, 2).join(''));
+    expect(hands).toEqual(new Set(['01', '10']));
   });
+
+  it('spreads all three as evenly as the headcount allows', () => {
+    for (let players = 3; players <= 8; players++) {
+      const hand = restrictionsForRound('RAVEN', 1, players);
+      expect(hand).toHaveLength(players);
+
+      const counts = [0, 1, 2].map((k) => hand.filter((r) => r === k).length);
+      expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+      expect(counts.every((c) => c >= 1)).toBe(true);
+    }
+  });
+
+  it('deals the same hand on every device', () => {
+    expect(restrictionsForRound('RAVEN', 3, 5)).toEqual(restrictionsForRound('RAVEN', 3, 5));
+  });
+
+  it('reshuffles between rounds rather than pinning a seat to a restriction', () => {
+    const hands = new Set<string>();
+    for (let round = 1; round <= 20; round++) hands.add(restrictionsForRound('RAVEN', round, 4).join(''));
+    expect(hands.size).toBeGreaterThan(1);
+  });
+
+  it('deals differently in different rooms', () => {
+    const hands = new Set(
+      ['RAVEN', 'EMBER', 'COMET', 'SABLE', 'HARBOR'].map((code) => restrictionsForRound(code, 1, 4).join('')),
+    );
+    expect(hands.size).toBeGreaterThan(1);
+  });
+
+  it('keeps every seat inside the restriction set', () => {
+    for (let players = 2; players <= 8; players++) {
+      for (const r of restrictionsForRound('RAVEN', 1, players)) {
+        expect(r).toBeGreaterThanOrEqual(0);
+        expect(r).toBeLessThan(players < 3 ? 2 : 3);
+      }
+    }
+  });
+
   it('reseeds the deal per round', () => {
     expect(puzzleKey('RAVEN', 1)).not.toBe(puzzleKey('RAVEN', 2));
   });
