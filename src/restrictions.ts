@@ -24,7 +24,7 @@ export const CALL_RESTRICTIONS: readonly Restriction[] = [
 export const TABLE_RESTRICTIONS: readonly Restriction[] = [
   { t: 'No talking', d: 'Do not make a sound. You can still gesture, and see everyone.' },
   { t: 'No gestures', d: 'Keep your hands and body still. You can still talk, and see everyone.' },
-  { t: 'No looking', d: 'Do not look at anyone — turning away is easiest. You can still talk, and hear everyone.' },
+  { t: 'No looking', d: 'Do not look at anyone. Turning away is easiest, but take care not to show your screen. You can still talk, and hear everyone.' },
 ];
 
 /** Both sets are the same size, which is why dealing does not care which one is in play. */
