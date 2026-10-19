@@ -193,6 +193,7 @@ input:focus,select:focus{outline:2.5px solid var(--accent);outline-offset:1px;bo
   font-family:var(--mono);text-transform:uppercase;letter-spacing:.12em}
 .rule::before,.rule::after{content:"";flex:1;height:1px;background:var(--line)}
 .err{font-size:13.5px;color:var(--warn)}
+#inviteCode{font-family:var(--mono);letter-spacing:.14em;margin-left:4px}
 
 /* ---------- lobby ---------- */
 .roomcode{display:block;width:100%;background:var(--surface);border:1.5px solid var(--line-strong);

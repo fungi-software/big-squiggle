@@ -11,6 +11,19 @@ const MESSAGES: Record<string, string> = {
 };
 
 let busy = false;
+/** The code an invite link carried. While set, joining it is the only offer. */
+let invite = '';
+
+export function setInvite(code: string): void {
+  invite = code;
+}
+
+/** Back to the full choice, with the address no longer pointing at the room. */
+export function clearInvite(): void {
+  if (!invite) return;
+  invite = '';
+  history.replaceState(null, '', '/');
+}
 
 function setError(message: string): void {
   const el = byId('homeErr');
@@ -36,10 +49,20 @@ async function attempt(run: (uid: string, name: string) => Promise<string>): Pro
   try {
     enterRoom(await run(uid, name));
   } catch (err) {
+    // a dead invite would leave only a button that cannot work, so offer everything again
+    if (err instanceof RoomError) clearInvite();
     setError(err instanceof RoomError ? (MESSAGES[err.kind] ?? 'Could not join.') : 'Could not reach the game.');
   } finally {
     busy = false;
   }
+}
+
+export function joinInvite(): Promise<void> {
+  const code = invite;
+  return attempt(async (uid, name) => {
+    await joinRoom(code, uid, name);
+    return code;
+  });
 }
 
 export function mountHome(rerender: () => void): void {
@@ -71,6 +94,12 @@ export function mountHome(rerender: () => void): void {
   };
 
   byId('joinBtn').addEventListener('click', join);
+  byId('inviteBtn').addEventListener('click', () => {
+    void joinInvite().then(rerender);
+  });
+  nameField.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && invite) void joinInvite().then(rerender);
+  });
   codeField.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') join();
   });
@@ -83,6 +112,11 @@ export function renderHome(): void {
 
   byId<HTMLButtonElement>('createBtn').disabled = !ready;
   byId<HTMLButtonElement>('joinBtn').disabled = !ready;
+  byId<HTMLButtonElement>('inviteBtn').disabled = !ready;
+
+  byId('inviteBtn').hidden = !invite;
+  byId('inviteCode').textContent = invite;
+  for (const id of ['createBtn', 'orRule', 'codeRow']) byId(id).hidden = !!invite;
   byId('connecting').hidden = signedIn;
 
   byId('stepName').classList.toggle('on', named);

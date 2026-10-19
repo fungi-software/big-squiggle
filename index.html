@@ -74,11 +74,13 @@
         <div class="step" id="stepRoom">
           <span class="num">2</span>
           <div class="stepbody">
+            <button class="btn primary wide" id="inviteBtn" hidden disabled>Join room <span id="inviteCode"></span></button>
+
             <button class="btn primary wide" id="createBtn" disabled>Create a room</button>
 
-            <div class="rule"><span>or</span></div>
+            <div class="rule" id="orRule"><span>or</span></div>
 
-            <div class="codewrap">
+            <div class="codewrap" id="codeRow">
               <input type="text" id="joinCode" maxlength="12" placeholder="CODE" spellcheck="false" autocomplete="off" aria-label="Game code">
               <button class="btn" id="joinBtn" disabled>Join</button>
             </div>

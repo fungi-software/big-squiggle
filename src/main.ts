@@ -3,12 +3,12 @@ import './styles.css';
 import { signIn } from './firebase';
 import { bindServerTime } from './presence';
 import { render } from './render';
-import { joinRoom, normalizeCode } from './room';
+import { normalizeCode } from './room';
 import { rememberedName, rememberedRoom } from './session';
 import { enterRoom, onChange, setUid } from './store';
 import { mountBoard } from './events';
 import { mountBrief } from './views/brief';
-import { mountHome } from './views/home';
+import { joinInvite, mountHome, setInvite } from './views/home';
 import { mountLobby } from './views/lobby';
 import { mountClock } from './views/clock';
 import { mountTopbar } from './views/topbar';
@@ -38,13 +38,9 @@ void signIn()
     const invited = codeFromUrl();
     const remembered = rememberedRoom();
     if (invited) {
-      const name = rememberedName();
-      // an invite link with no name yet drops you on the home screen with the code filled
-      if (name) {
-        await joinRoom(invited, uid, name).then(() => enterRoom(invited)).catch(() => {});
-      } else {
-        (document.getElementById('joinCode') as HTMLInputElement).value = invited;
-      }
+      // an invite link offers only that room; with a name already known it just joins
+      setInvite(invited);
+      if (rememberedName()) await joinInvite();
     } else if (remembered) {
       enterRoom(remembered);
     }

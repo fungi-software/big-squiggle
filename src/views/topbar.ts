@@ -2,6 +2,7 @@ import { byId } from '../dom';
 import { abandonRound, leaveRoom } from '../room';
 import type { RoundGap } from '../roomLogic';
 import { exitRoom, getRoom, getUid } from '../store';
+import { clearInvite } from './home';
 
 /**
  * Leaving is two taps rather than one. A misclick during a round would strand the rest
@@ -19,6 +20,7 @@ function leave(rerender: () => void): void {
   const uid = getUid();
   if (room && uid) void leaveRoom(room.code, uid, room);
   exitRoom();
+  clearInvite();
   ask(false);
   rerender();
 }
