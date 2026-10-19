@@ -204,12 +204,14 @@ describe('round derivation', () => {
 
   it('spreads all three as evenly as the headcount allows', () => {
     for (let players = 3; players <= 8; players++) {
-      const hand = restrictionsForRound('RAVEN', 1, players);
-      expect(hand).toHaveLength(players);
+      for (let round = 1; round <= 3; round++) {
+        const hand = restrictionsForRound('RAVEN', round, players);
+        expect(hand).toHaveLength(players);
 
-      const counts = [0, 1, 2].map((k) => hand.filter((r) => r === k).length);
-      expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
-      expect(counts.every((c) => c >= 1)).toBe(true);
+        const counts = [0, 1, 2].map((k) => hand.filter((r) => r === k).length);
+        expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+        expect(counts.every((c) => c >= 1)).toBe(true);
+      }
     }
   });
 
@@ -217,10 +219,25 @@ describe('round derivation', () => {
     expect(restrictionsForRound('RAVEN', 3, 5)).toEqual(restrictionsForRound('RAVEN', 3, 5));
   });
 
-  it('reshuffles between rounds rather than pinning a seat to a restriction', () => {
-    const hands = new Set<string>();
-    for (let round = 1; round <= 20; round++) hands.add(restrictionsForRound('RAVEN', round, 4).join(''));
-    expect(hands.size).toBeGreaterThan(1);
+  it('moves every seat to a different restriction each round', () => {
+    for (let players = 2; players <= 8; players++) {
+      for (let round = 1; round <= 12; round++) {
+        const before = restrictionsForRound('RAVEN', round, players);
+        const after = restrictionsForRound('RAVEN', round + 1, players);
+        before.forEach((r, seat) => expect(after[seat]).not.toBe(r));
+      }
+    }
+  });
+
+  it('cycles each seat through the whole set', () => {
+    for (let players = 2; players <= 8; players++) {
+      const kinds = players < 3 ? 2 : 3;
+      for (let seat = 0; seat < players; seat++) {
+        const seen = new Set<number>();
+        for (let round = 1; round <= kinds; round++) seen.add(restrictionsForRound('RAVEN', round, players)[seat]!);
+        expect(seen.size).toBe(kinds);
+      }
+    }
   });
 
   it('deals differently in different rooms', () => {

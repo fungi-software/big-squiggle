@@ -180,19 +180,24 @@ export function nextHost(room: RoomSnapshot): string | null {
 }
 
 /**
- * Restrictions are dealt fresh every round, evenly and at random.
+ * Restrictions are dealt evenly, then every seat moves on to the next one each round.
  *
  * A two-player table never draws sound-off: with only one other person on the call, a
  * player who cannot hear has no way back into the conversation. Three or more share all
  * three, spread as evenly as the headcount allows.
  *
- * Seeded from the room and round so every device deals the same hand without asking.
+ * The room shuffles the hand once and every rematch steps each seat along the set, so
+ * nobody keeps the same restriction twice running and the spread stays even. Reshuffling per round left that to chance, and a pair
+ * could sit through several rounds of the same split.
+ *
+ * Seeded from the room so every device deals the same hand without asking.
  */
 export function restrictionsForRound(code: string, roundId: number, playerCount: number): number[] {
   const kinds = playerCount < 3 ? 2 : RESTRICTION_KINDS;
   const pool: number[] = [];
   for (let i = 0; i < playerCount; i++) pool.push(i % kinds);
-  return shuffled(pool, mulberry32(seedFrom(code + 'R' + roundId, playerCount)));
+  const base = shuffled(pool, mulberry32(seedFrom(code + 'R', playerCount)));
+  return base.map((r) => (r + roundId) % kinds);
 }
 
 export function gameMode(room: RoomSnapshot): GameMode {
