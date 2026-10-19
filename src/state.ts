@@ -1,6 +1,7 @@
 /** Board state for the round in front of you. Everything shared lives in the room. */
 export interface BoardState {
   draft: (number | null)[];
+  /** The slot a tapped shape lands in; -1 until the player picks one. */
   sel: number;
   plate: number[];
   /** `seed:seat` of the deal the plate was built for; a mismatch means re-deal. */
@@ -11,7 +12,7 @@ export interface BoardState {
 
 export const S: BoardState = {
   draft: [],
-  sel: 0,
+  sel: -1,
   plate: [],
   builtFor: '',
   pinned: {},
@@ -20,7 +21,7 @@ export const S: BoardState = {
 
 export function resetBoard(): void {
   S.draft = [];
-  S.sel = 0;
+  S.sel = -1;
   S.plate = [];
   S.builtFor = '';
   S.pinned = {};

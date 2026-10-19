@@ -12,7 +12,7 @@ import {
   solveBadge,
   type RoomSnapshot,
 } from '../roomLogic';
-import { firstOpen, restoreDraft, S, saveDraft } from '../state';
+import { restoreDraft, S, saveDraft } from '../state';
 
 /** The attempt already acted on, so a held button resolves once rather than every frame. */
 let settled: number | null = null;
@@ -75,7 +75,7 @@ export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void
     S.draft[i] = P.answer[i]!;
     S.pinnedGlyph[P.answer[i]!] = true;
   });
-  if (fresh || S.pinned[S.sel] || S.sel >= P.slots) S.sel = firstOpen();
+  if (fresh || S.pinned[S.sel] || S.sel >= P.slots) S.sel = -1;
 
   byId('slots').innerHTML = S.draft
     .map((g, i) => {

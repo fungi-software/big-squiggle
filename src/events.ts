@@ -33,7 +33,8 @@ export function mountBoard(rerender: () => void): void {
   glyphGrid.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-glyph]');
     if (!b) return;
-    if (!place(S.sel, parseInt(b.dataset.glyph!, 10))) return;
+    // nothing picked yet, so the shape goes to the first gap
+    if (!place(S.sel >= 0 ? S.sel : firstOpen(), parseInt(b.dataset.glyph!, 10))) return;
     S.sel = firstOpen();
     rerender();
   });
