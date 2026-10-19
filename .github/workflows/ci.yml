@@ -10,6 +10,12 @@ env:
   # by hand. Until one exists the deploy step skips itself and the build stays green.
   FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BIG_SQUIGGLE || secrets.FIREBASE_SERVICE_ACCOUNT }}
 
+# the preview deploy comments its link on the PR and reports a check
+permissions:
+  checks: write
+  contents: read
+  pull-requests: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -36,4 +42,13 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ env.FIREBASE_SERVICE_ACCOUNT }}
           channelId: live
+          projectId: big-squiggle
+
+      # a PR from a fork gets no secrets, so only this repo's own branches get a preview
+      - name: Deploy a preview channel
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && env.FIREBASE_SERVICE_ACCOUNT != '' }}
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ env.FIREBASE_SERVICE_ACCOUNT }}
           projectId: big-squiggle
