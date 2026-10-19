@@ -14,3 +14,6 @@ tests/__screenshots__/
 
 # local firebase config (real project); .env.example documents the keys
 .env.local
+
+# personal Claude Code settings
+.claude/settings.local.json
