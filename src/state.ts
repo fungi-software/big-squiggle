@@ -1,7 +1,7 @@
 /** Board state for the round in front of you. Everything shared lives in the room. */
 export interface BoardState {
   draft: (number | null)[];
-  /** The slot a tapped shape lands in; -1 until the player picks one. */
+  /** The slot a tapped shape lands in; -1 until the player picks one, and again once every gap is filled. */
   sel: number;
   plate: number[];
   /** `seed:seat` of the deal the plate was built for; a mismatch means re-deal. */
@@ -50,14 +50,12 @@ export function restoreDraft(key: string): (number | null)[] | null {
   }
 }
 
+/** The first empty slot, or -1 when the sequence is full. */
 export function firstOpen(): number {
   for (let i = 0; i < S.draft.length; i++) {
     if (!S.pinned[i] && S.draft[i] == null) return i;
   }
-  for (let j = 0; j < S.draft.length; j++) {
-    if (!S.pinned[j]) return j;
-  }
-  return 0;
+  return -1;
 }
 
 /** A glyph already sitting in a given can never be the answer anywhere else. */
