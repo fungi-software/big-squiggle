@@ -1,5 +1,6 @@
 import { onDisconnect, onValue, ref, remove, set } from 'firebase/database';
 
+import { track, type PresenceTrigger } from './analytics';
 import { db } from './firebase';
 
 let offset = 0;
@@ -26,10 +27,11 @@ let lastAssert = 0;
  * like the app waking up calls this, as does noticing our own flag missing from a
  * snapshot. Throttled so a rejected write cannot become a loop.
  */
-export function assertPresence(code: string, uid: string): void {
+export function assertPresence(code: string, uid: string, trigger: PresenceTrigger): void {
   const now = Date.now();
   if (now - lastAssert < 3000) return;
   lastAssert = now;
+  track('presence_reasserted', { trigger });
   const onlineRef = ref(db, `rooms/${code}/online/${uid}`);
   void onDisconnect(onlineRef).remove();
   void set(onlineRef, true);
@@ -52,17 +54,20 @@ export function bindPresence(code: string, uid: string): () => void {
     void set(onlineRef, true);
   });
 
-  const wake = () => {
-    if (document.visibilityState === 'visible') assertPresence(code, uid);
+  const wake = (trigger: PresenceTrigger) => () => {
+    if (document.visibilityState === 'visible') assertPresence(code, uid, trigger);
   };
-  document.addEventListener('visibilitychange', wake);
-  window.addEventListener('focus', wake);
-  window.addEventListener('online', wake);
+  const onVisible = wake('visibility');
+  const onFocus = wake('focus');
+  const onOnline = wake('online');
+  document.addEventListener('visibilitychange', onVisible);
+  window.addEventListener('focus', onFocus);
+  window.addEventListener('online', onOnline);
 
   return () => {
-    document.removeEventListener('visibilitychange', wake);
-    window.removeEventListener('focus', wake);
-    window.removeEventListener('online', wake);
+    document.removeEventListener('visibilitychange', onVisible);
+    window.removeEventListener('focus', onFocus);
+    window.removeEventListener('online', onOnline);
     stop();
     void onDisconnect(onlineRef).cancel();
     void onDisconnect(liveRef).cancel();

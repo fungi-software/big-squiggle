@@ -1,5 +1,6 @@
 import './styles.css';
 
+import { identify, initAnalytics } from './analytics';
 import { signIn } from './firebase';
 import { bindServerTime } from './presence';
 import { render } from './render';
@@ -19,6 +20,7 @@ function codeFromUrl(): string {
   return m ? normalizeCode(m[1]!) : '';
 }
 
+initAnalytics();
 onChange(render);
 mountHome(render);
 mountLobby();
@@ -33,6 +35,7 @@ bindServerTime();
 void signIn()
   .then(async (uid) => {
     setUid(uid);
+    identify(uid);
     render();
 
     const invited = codeFromUrl();
@@ -42,7 +45,7 @@ void signIn()
       setInvite(invited);
       if (rememberedName()) await joinInvite();
     } else if (remembered) {
-      enterRoom(remembered);
+      enterRoom(remembered, 'rejoin');
     }
     render();
   })

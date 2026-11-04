@@ -1,3 +1,4 @@
+import { track } from '../analytics';
 import { fanfare } from '../confetti';
 import { byId } from '../dom';
 import { svgOf } from '../glyphs';
@@ -142,6 +143,11 @@ function renderAttempt(room: RoomSnapshot, rerender: () => void): void {
   // inside a render pass instead left the win screen unpainted until the next snapshot.
   if (state.phase === 'resolved' && state.startedAt !== settled) {
     settled = state.startedAt!;
+    track('attempt_resolved', {
+      won: !!state.won,
+      round_id: room.meta.roundId,
+      player_count: room.meta.playerCount,
+    });
     if (state.won) {
       localWon = room.meta.roundId;
       // the hold finished HOLD_MS after the last press, on the shared server clock
@@ -149,7 +155,7 @@ function renderAttempt(room: RoomSnapshot, rerender: () => void): void {
       localSolvedAt = solvedAt;
       const took = elapsedMs(room.meta, serverNow(), solvedAt) ?? 0;
       localPrevBest = room.meta.bestMs;
-      void declareWon(room.code, solvedAt, took, localPrevBest);
+      void declareWon(room, solvedAt, took, localPrevBest);
       fanfare(byId<HTMLCanvasElement>('confetti'));
       byId('holdRow').hidden = true;
       stopTicker();

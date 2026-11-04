@@ -35,6 +35,16 @@ jobs:
 
       - run: npm run build
 
+      # the browser test plays a table of two against the emulator, which needs a JVM
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run test:e2e:emulator
+
       - name: Deploy to Firebase Hosting
         if: ${{ github.ref == 'refs/heads/main' && env.FIREBASE_SERVICE_ACCOUNT != '' }}
         uses: FirebaseExtended/action-hosting-deploy@v0

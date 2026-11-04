@@ -1,3 +1,4 @@
+import { screenShown } from './analytics';
 import { byId } from './dom';
 import { releaseHold } from './room';
 import { deriveScreen, roundGap, type Screen } from './roomLogic';
@@ -20,6 +21,7 @@ export function render(): void {
   const room = getRoom();
   const uid = getUid();
   const screen = deriveScreen(room, uid);
+  screenShown(screen);
 
   for (const [name, id] of Object.entries(VIEWS)) {
     byId(id).hidden = name !== screen;
@@ -31,7 +33,7 @@ export function render(): void {
 
   // leaving the board must drop the hold; otherwise a stale press blocks the next round
   if (screen !== 'play' && room && uid && room.live[uid]?.holding) {
-    void releaseHold(room.code, uid);
+    void releaseHold(room, uid, 'screen');
   }
 
   if (screen === 'home') renderHome();
