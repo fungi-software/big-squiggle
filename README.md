@@ -73,9 +73,10 @@ tests/
   rules.test.ts     security rules; runs under `npm run test:rules`
 ```
 
-CI typechecks, tests, and builds every push and pull request. With the
-`FIREBASE_SERVICE_ACCOUNT_BIG_SQUIGGLE` secret set, a push to `main` also deploys to
-Firebase Hosting and a pull request from this repo gets a preview channel.
+CI typechecks, tests, and builds every pull request and every push to `main`. With a
+`FIREBASE_SERVICE_ACCOUNT_BIG_SQUIGGLE` (or `FIREBASE_SERVICE_ACCOUNT`) secret set, a
+push to `main` also deploys to Firebase Hosting and a pull request from this repo gets
+a preview channel.
 
 ## Where this is going
 
