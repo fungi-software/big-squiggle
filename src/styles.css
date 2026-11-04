@@ -287,7 +287,6 @@ input:focus,select:focus{outline:2.5px solid var(--accent);outline-offset:1px;bo
 .intro{display:flex;flex-direction:column;gap:8px;margin-bottom:2px}
 .intro .lede{font-family:var(--display);font-weight:700;font-size:17px;line-height:1.25;color:var(--ink)}
 .intro .sub{font-size:13.5px;color:var(--ink-2);line-height:1.5}
-.intro .sub b{color:var(--warn);font-weight:600}
 
 /* ---------- the clock ---------- */
 .clock{font-family:var(--mono);font-size:14px;color:var(--ink-2);
