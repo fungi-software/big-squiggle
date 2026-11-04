@@ -2,6 +2,7 @@
   "name": "big-squiggle",
   "version": "0.1.0",
   "description": "A party game for a video call: everyone holds part of a sequence of shapes nobody can describe.",
+  "license": "MIT",
   "directories": {
     "doc": "docs"
   },
