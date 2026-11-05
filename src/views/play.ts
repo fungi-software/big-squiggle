@@ -25,6 +25,8 @@ let localWon: number | null = null;
 let localSolvedAt: number | undefined;
 /** The room record as it stood before this solve, captured before the write moves it. */
 let localPrevBest: number | undefined;
+/** The record as last seen while playing; the other device's write may land first. */
+let bestWhilePlaying: number | undefined;
 
 function puzzleOf(room: RoomSnapshot): Puzzle {
   return buildPuzzle(puzzleKey(room.code, room.meta.roundId), room.meta.playerCount);
@@ -112,6 +114,7 @@ export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void
   });
 
   saveDraft(stamp);
+  if (room.meta.status === 'playing') bestWhilePlaying = room.meta.bestMs;
   renderAttempt(room, rerender);
   renderWin(room);
 }
@@ -121,26 +124,13 @@ export function renderPlay(room: RoomSnapshot, uid: string, rerender: () => void
  * charging, because progress is a function of time rather than of anything arriving.
  */
 function renderAttempt(room: RoomSnapshot, rerender: () => void): void {
-  const over = room.meta.status === 'won' || localWon === room.meta.roundId;
-  byId('holdRow').hidden = over;
-  if (over) {
-    stopTicker();
-    return;
-  }
-
   const seated = seatedUids(room);
   // the round was dealt for this many; anything less and it cannot be validated at all
   const state = attempt(seated, room.live, serverNow(), room.meta.playerCount);
 
-  // no point offering a control that can never resolve
-  if (roundGap(room)) {
-    byId('holdRow').hidden = true;
-    stopTicker();
-    return;
-  }
-
-  // Act on a resolution, then paint this same frame with the result. Re-rendering from
-  // inside a render pass instead left the win screen unpainted until the next snapshot.
+  // Resolve before reading the room's verdict: on a fast network another device's win
+  // lands before this one's next frame, and this device saw the same hold complete.
+  // Painting the result in this same frame keeps the win screen from waiting a snapshot.
   if (state.phase === 'resolved' && state.startedAt !== settled) {
     settled = state.startedAt!;
     track('attempt_resolved', {
@@ -154,15 +144,24 @@ function renderAttempt(room: RoomSnapshot, rerender: () => void): void {
       const solvedAt = state.startedAt! + HOLD_MS;
       localSolvedAt = solvedAt;
       const took = elapsedMs(room.meta, serverNow(), solvedAt) ?? 0;
-      localPrevBest = room.meta.bestMs;
+      localPrevBest = bestWhilePlaying;
       void declareWon(room, solvedAt, took, localPrevBest);
       fanfare(byId<HTMLCanvasElement>('confetti'));
-      byId('holdRow').hidden = true;
-      stopTicker();
-      return;
+    } else {
+      missUntil = Date.now() + 700;
     }
-    missUntil = Date.now() + 700;
   }
+
+  const over = room.meta.status === 'won' || localWon === room.meta.roundId;
+  // no point offering a control that can never resolve
+  if (over || roundGap(room)) {
+    byId('holdRow').hidden = true;
+    // a verdict that arrived a frame early still lets this device's own hold resolve
+    if (over && state.phase === 'charging') startTicker(rerender);
+    else stopTicker();
+    return;
+  }
+  byId('holdRow').hidden = false;
 
   byId('holdPips').innerHTML = seated
     .map((_, i) => `<i class="pip${i < state.down ? ' on' : ''}"></i>`)

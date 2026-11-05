@@ -19,8 +19,18 @@ export default defineConfig({
     env: {
       VITE_POSTHOG_KEY: 'phc_e2e',
       VITE_POSTHOG_HOST: 'https://posthog.e2e.test',
-      // under `firebase emulators:exec` a local .env.local must not win over the emulator
-      ...(process.env.FIREBASE_DATABASE_EMULATOR_HOST ? { VITE_USE_EMULATOR: 'true' } : {}),
+      // under `firebase emulators:exec` a local .env.local must not win over the emulator,
+      // and the demo project is the one the emulator was started for
+      ...(process.env.FIREBASE_DATABASE_EMULATOR_HOST
+        ? {
+            VITE_USE_EMULATOR: 'true',
+            VITE_FB_API_KEY: 'demo-key',
+            VITE_FB_AUTH_DOMAIN: 'demo-big-squiggle.firebaseapp.com',
+            VITE_FB_DATABASE_URL: 'https://demo-big-squiggle-default-rtdb.firebaseio.com',
+            VITE_FB_PROJECT_ID: 'demo-big-squiggle',
+            VITE_FB_APP_ID: '1:0:web:0',
+          }
+        : {}),
     },
   },
 });

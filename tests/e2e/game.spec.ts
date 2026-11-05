@@ -35,7 +35,8 @@ function decode(req: Request): Captured[] {
   if (!buf) return [];
   const raw = buf.toString('utf8');
   let text = raw;
-  if (new URL(req.url()).searchParams.get('compression') === 'gzip-js') {
+  // gzip is announced in the query only once the SDK has its config; the magic bytes always say
+  if (buf[0] === 0x1f && buf[1] === 0x8b) {
     text = gunzipSync(buf).toString('utf8');
   } else if (raw.startsWith('data=')) {
     text = Buffer.from(decodeURIComponent(raw.slice(5)), 'base64').toString('utf8');
@@ -77,7 +78,8 @@ async function player(browser: Browser, name: string): Promise<Player> {
       const path = new URL(req.url()).pathname + new URL(req.url()).search;
       const type = req.headers()['content-type'] ?? '';
       const bytes = req.postDataBuffer()?.length ?? -1;
-      diagnostics.push(`${name} ${path} ${type} bytes=${bytes} events=${got.map((e) => e.event).join(',')}`);
+      const head = got.length ? '' : ` body=${(req.postData() ?? '').slice(0, 80)}`;
+      diagnostics.push(`${name} ${path} ${type} bytes=${bytes} events=${got.map((e) => e.event).join(',')}${head}`);
     }
     const json = req.method() === 'POST' || req.url().endsWith('/config');
     // flags and remote config get an empty answer, which leaves every SDK default in place
