@@ -1,8 +1,6 @@
 /**
- * The one module that knows PostHog exists; everything else calls the typed helpers here.
- * With no key configured (the emulator path, every unit test) posthog-js is never loaded
- * and each helper is a no-op. Nothing read from PostHog may feed `puzzle.ts`, `live.ts`
- * or `roomLogic.ts`: every device must compute the same deal and verdict from the room.
+ * The only module that imports posthog-js; with no key it is never loaded and every helper
+ * is a no-op. Nothing it returns may feed the deal or the verdict (README, Analytics).
  */
 import type { PostHog } from 'posthog-js';
 
@@ -15,6 +13,7 @@ export type PresenceTrigger = 'visibility' | 'focus' | 'online' | 'snapshot';
 
 /** Every event the game sends, with the properties each one carries. */
 export type Events = {
+  /** `attempts` counts the codes found taken before this one, so a first try is 0. */
   room_created: { room_code: string; attempts: number };
   room_joined: { room_code: string; via: JoinVia; already_in: boolean };
   join_failed: {
@@ -42,7 +41,8 @@ export type Events = {
   };
   new_round: { rounds_so_far: number };
   round_abandoned: { round_id: number; seated: number; player_count: number };
-  room_left: { screen: Screen; rounds_played: number };
+  /** Carries its own code: the room context is already cleared by the time it is sent. */
+  room_left: { room_code: string; screen: Screen; rounds_played: number };
   host_claimed: { grace_ms: number };
   presence_reasserted: { trigger: PresenceTrigger };
 };
@@ -61,7 +61,7 @@ export interface RoomContext {
 export interface RoomGroup {
   mode: GameMode;
   player_count: number;
-  created_at: string;
+  created_at?: string;
   rounds_played: number;
   best_ms?: number;
 }
@@ -74,26 +74,31 @@ let client: PostHog | null = null;
 /** Calls made while the SDK chunk is still downloading; replayed in order once it lands. */
 let queued: Array<(ph: PostHog) => void> = [];
 let shown: Screen | null = null;
+/** Set once the SDK chunk fails to load, so calls stop queueing for a client that never comes. */
+let unavailable = false;
 
 function withClient(fn: (ph: PostHog) => void): void {
   if (client) fn(client);
-  else if (KEY) queued.push(fn);
+  else if (KEY && !unavailable) queued.push(fn);
 }
 
 /** Set as a super property so one project can tell its three deploys apart. */
 export function environmentFor(mode: string, hostname: string): 'local' | 'preview' | 'production' {
-  if (mode !== 'production') return 'local';
+  // `vite preview` serves a production build on localhost
+  if (mode !== 'production' || !/\.(web\.app|firebaseapp\.com)$/.test(hostname)) return 'local';
   // a Firebase preview channel is served from `<site>--<channel>-<hash>.web.app`
   return hostname.includes('--') ? 'preview' : 'production';
 }
 
-/** Loads the SDK as its own chunk. Pageviews are captured by hand: there is no router. */
+/** Loads the SDK as its own chunk and configures it. */
 export function initAnalytics(): void {
   if (!KEY) return;
   const params = new URLSearchParams(location.search);
-  void import('posthog-js').then(({ default: posthog }) => {
+  import('posthog-js').then(({ default: posthog }) => {
     posthog.init(KEY, {
       api_host: HOST,
+      // covers the moment before the persisted opt-out below is written
+      opt_out_capturing_by_default: params.has('no-track'),
       defaults: '2026-08-30',
       capture_pageview: false,
       capture_pageleave: false,
@@ -114,15 +119,17 @@ export function initAnalytics(): void {
         maskAllInputs: true,
       },
     });
-    // no consent banner; `?no-track` is the documented escape hatch
+    // `?no-track` is the documented escape hatch; there is no consent banner
     if (params.has('no-track')) posthog.opt_out_capturing();
-    else if (params.has('track')) posthog.opt_in_capturing();
     posthog.register({ environment: environmentFor(env.MODE, location.hostname) });
 
     client = posthog;
     const pending = queued;
     queued = [];
     for (const fn of pending) fn(posthog);
+  }).catch(() => {
+    unavailable = true;
+    queued = [];
   });
 
   addEventListener('pagehide', () => {
@@ -162,6 +169,8 @@ const ROOM_KEYS: (keyof RoomContext)[] = ['room_code', 'mode', 'player_count', '
 export function leaveRoomContext(): void {
   withClient((ph) => {
     for (const key of ROOM_KEYS) ph.unregister(key);
+    // the group association is a super property too, and outlives the room otherwise
+    ph.resetGroups();
   });
 }
 
@@ -180,7 +189,7 @@ export function screenShown(screen: Screen): void {
   });
 }
 
-/** Undefined until flags are evaluated, and always with no key. Presentation only, never the deal. */
+/** Undefined until flags are evaluated, and always with no key. */
 export function flag(key: string): string | boolean | undefined {
   return client?.getFeatureFlag(key) ?? undefined;
 }

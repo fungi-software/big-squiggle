@@ -9,7 +9,7 @@ import type { GameMode } from './restrictions';
 import { db } from './firebase';
 import { serverNow } from './presence';
 import {
-  assignSeats, deriveScreen, gameMode, isNewBest, isStale, MAX_PLAYERS, onlineUids,
+  assignSeats, deriveScreen, gameMode, isNewBest, isStale, MAX_PLAYERS, onlineUids, roundsPlayed,
   type RoomMeta, type RoomSnapshot,
 } from './roomLogic';
 
@@ -114,7 +114,8 @@ export async function joinRoom(
     if (Object.keys(onlineSnap.val() ?? {}).length >= MAX_PLAYERS) throw new RoomError('full');
   }
   await addPlayer(code, uid, name, alreadyIn);
-  track('room_joined', { room_code: code, via, already_in: alreadyIn });
+  // a reload over an invite URL comes back through here rather than the remembered room
+  track('room_joined', { room_code: code, via: alreadyIn ? 'rejoin' : via, already_in: alreadyIn });
 }
 
 async function addPlayer(code: string, uid: string, name: string, keepState = false): Promise<void> {
@@ -130,7 +131,11 @@ async function addPlayer(code: string, uid: string, name: string, keepState = fa
 
 export async function leaveRoom(code: string, uid: string, room?: RoomSnapshot | null): Promise<void> {
   if (room) {
-    track('room_left', { screen: deriveScreen(room, uid), rounds_played: roundsPlayed(room.meta) });
+    track('room_left', {
+      room_code: code,
+      screen: deriveScreen(room, uid),
+      rounds_played: roundsPlayed(room.meta),
+    });
   }
   await Promise.all([
     remove(roomRef(code, `/players/${uid}`)),
@@ -165,11 +170,6 @@ export function setReady(code: string, uid: string, roundId: number, ready: bool
 export function setBriefed(code: string, uid: string, roundId: number, msOnBrief: number): Promise<void> {
   track('brief_acknowledged', { ms_on_brief: msOnBrief });
   return update(roomRef(code, `/players/${uid}`), { briefed: roundId });
-}
-
-/** Rounds that reached a verdict: the current one counts once it is won. */
-export function roundsPlayed(meta: RoomMeta): number {
-  return meta.roundId - (meta.status === 'won' ? 0 : 1);
 }
 
 /**

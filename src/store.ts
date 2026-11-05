@@ -5,8 +5,8 @@ import {
   type RoomContext, type RoomGroup,
 } from './analytics';
 import { assertPresence, bindPresence } from './presence';
-import { beginPlay, claimHost, roundsPlayed, subscribeRoom } from './room';
-import { allBriefed, gameMode, isHost, nextHost, type RoomSnapshot } from './roomLogic';
+import { beginPlay, claimHost, subscribeRoom } from './room';
+import { allBriefed, gameMode, isHost, nextHost, roundsPlayed, type RoomSnapshot } from './roomLogic';
 import { rememberRoom } from './session';
 
 let uid: string | null = null;
@@ -15,7 +15,6 @@ let unsubRoom: Unsubscribe | null = null;
 let unbindPresence: (() => void) | null = null;
 let notify: () => void = () => {};
 let hostWatch: ReturnType<typeof setTimeout> | null = null;
-let lastContext = '';
 let lastGroup = '';
 
 /** A refresh drops presence for a moment; only a real departure should move the room. */
@@ -69,7 +68,6 @@ export function exitRoom(): void {
   unbindPresence = null;
   room = null;
   rememberRoom('');
-  lastContext = '';
   lastGroup = '';
   leaveRoomContext();
 }
@@ -79,6 +77,8 @@ function observe(prev: RoomSnapshot | null, next: RoomSnapshot): void {
   if (!uid) return;
   if (!prev) noteFirstMode(gameMode(next));
 
+  // registering is a local write, so every snapshot refreshes it; a group identify is an
+  // event, so that one goes out only when its record changes
   const context: RoomContext = {
     room_code: next.code,
     mode: gameMode(next),
@@ -87,16 +87,12 @@ function observe(prev: RoomSnapshot | null, next: RoomSnapshot): void {
     is_host: isHost(next, uid),
     seat: next.seats[uid] ?? null,
   };
-  const contextKey = JSON.stringify(context);
-  if (contextKey !== lastContext) {
-    lastContext = contextKey;
-    setRoomContext(context);
-  }
+  setRoomContext(context);
 
   const group: RoomGroup = {
     mode: gameMode(next),
     player_count: next.meta.playerCount,
-    created_at: new Date(next.meta.createdAt).toISOString(),
+    created_at: next.meta.createdAt ? new Date(next.meta.createdAt).toISOString() : undefined,
     rounds_played: roundsPlayed(next.meta),
   };
   if (next.meta.bestMs) group.best_ms = next.meta.bestMs;

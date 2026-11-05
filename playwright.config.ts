@@ -19,6 +19,8 @@ export default defineConfig({
     env: {
       VITE_POSTHOG_KEY: 'phc_e2e',
       VITE_POSTHOG_HOST: 'https://posthog.e2e.test',
+      // under `firebase emulators:exec` a local .env.local must not win over the emulator
+      ...(process.env.FIREBASE_DATABASE_EMULATOR_HOST ? { VITE_USE_EMULATOR: 'true' } : {}),
     },
   },
 });

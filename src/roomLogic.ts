@@ -229,6 +229,11 @@ export function formatDuration(ms: number): string {
   return mins + ':' + String(total % 60).padStart(2, '0');
 }
 
+/** Rounds dealt and over, won or abandoned; the current one counts once it is won. */
+export function roundsPlayed(meta: Pick<RoomMeta, 'roundId' | 'status'>): number {
+  return meta.roundId - (meta.status === 'won' ? 0 : 1);
+}
+
 export function isNewBest(elapsed: number, best: number | undefined): boolean {
   return elapsed > 0 && (!best || elapsed < best);
 }

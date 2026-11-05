@@ -123,10 +123,11 @@ export function mountBoard(rerender: () => void): void {
     clearHot();
     const i = parseInt(b.dataset.slot!, 10);
     if (!S.pinned[i]) {
-      const had = S.draft[i];
+      let had = S.draft[i];
       let placed = false;
       if (drag.kind === 'glyph') {
         placed = place(i, drag.value);
+        if (placed) had = had !== drag.value ? had : null;
       } else if (drag.value !== i) {
         const j = drag.value;
         const t = S.draft[i]!;

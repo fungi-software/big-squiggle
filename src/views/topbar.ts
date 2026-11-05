@@ -18,8 +18,10 @@ function ask(open: boolean): void {
 function leave(rerender: () => void): void {
   const room = getRoom();
   const uid = getUid();
-  if (room && uid) void leaveRoom(room.code, uid, room);
+  // unsubscribe first: a local write replays to the listener synchronously, which would
+  // paint the home screen while the room is still the registered context
   exitRoom();
+  if (room && uid) void leaveRoom(room.code, uid, room);
   clearInvite();
   ask(false);
   rerender();

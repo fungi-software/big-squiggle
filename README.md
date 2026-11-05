@@ -36,8 +36,8 @@ which needs a JVM). To run against the real project instead, copy `.env.example`
 
 Other scripts: `npm run build`, `npm run preview`, `npm run typecheck`, `npm test`,
 `npm run test:rules` (security rules, against the emulator), and `npm run test:e2e`
-(a browser test where a table of two plays a round; `npm run test:e2e:emulator` wraps
-it in the emulator suite, which is what CI runs).
+(a browser test where a table of two plays through three rounds and every PostHog event
+sent is checked; `npm run test:e2e:emulator` wraps it in the emulator suite, as CI does).
 
 Deploying rules: `npx firebase deploy --only database`.
 
@@ -72,7 +72,7 @@ tests/
   roomLogic.test.ts the room rules, without needing a database
   live.test.ts      the hold-to-validate predicate
   rules.test.ts     security rules; runs under `npm run test:rules`
-  e2e/game.spec.ts  two browsers solve a board; asserts the PostHog events sent
+  e2e/game.spec.ts  two browsers play three rounds; asserts the PostHog events sent
 ```
 
 ## Analytics
@@ -85,8 +85,8 @@ The Firebase anonymous uid is the identity. A player's name is a person property
 where they typed it, and never an event property. The lobby roster is marked
 `ph-no-capture`, and inputs are masked in session replay.
 
-There is no consent banner. Open the game with `?no-track` to opt a browser out, and
-`?track` to opt it back in; both persist in that browser.
+There is no consent banner. Open the game with `?no-track` to opt a browser out; it
+persists in that browser until its site data is cleared.
 
 Deploys to Firebase Hosting from `main` once `FIREBASE_SERVICE_ACCOUNT` and
 `FIREBASE_PROJECT_ID` are set; until then CI just typechecks, tests, and builds.

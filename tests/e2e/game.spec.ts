@@ -2,7 +2,7 @@ import { gunzipSync } from 'node:zlib';
 
 import { expect, test, type Browser, type Page, type Request } from '@playwright/test';
 
-import { buildPuzzle } from '../../src/puzzle';
+import { buildPuzzle, type Puzzle } from '../../src/puzzle';
 import { puzzleKey } from '../../src/roomLogic';
 
 /** Every PostHog request is answered here, so nothing leaves the browser. */
@@ -11,6 +11,8 @@ const POSTHOG = 'https://posthog.e2e.test/**';
 interface Captured {
   event: string;
   properties: Record<string, unknown>;
+  /** Chromium reports a beacon as `ping`, which is how the unload path shows up. */
+  transport: string;
 }
 
 interface Player {
@@ -45,7 +47,7 @@ function decode(req: Request): Captured[] {
     .filter((e): e is { event: string; properties?: Record<string, unknown> } =>
       typeof (e as { event?: unknown }).event === 'string',
     )
-    .map((e) => ({ event: e.event, properties: e.properties ?? {} }));
+    .map((e) => ({ event: e.event, properties: e.properties ?? {}, transport: req.resourceType() }));
 }
 
 /** The SDK drops every event from a likely bot: a headless UA string or brand, or `navigator.webdriver`. */
@@ -72,9 +74,78 @@ async function player(browser: Browser, name: string): Promise<Player> {
   });
   const page = await context.newPage();
   await page.goto('/');
-  await expect(page.locator('#connecting')).toBeHidden();
+  // anonymous sign-in is a round trip to Firebase and can take a few seconds cold
+  await expect(page.locator('#connecting')).toBeHidden({ timeout: 20_000 });
   await page.fill('#nameInput', name);
   return { page, events, named: (event) => events.filter((e) => e.event === event) };
+}
+
+async function sent(p: Player, event: string, count: number): Promise<void> {
+  // the SDK batches on a timer, so an event is only certain once its request is seen
+  await expect.poll(() => p.named(event).length, { timeout: 15_000 }).toBe(count);
+}
+
+/**
+ * Requests sent during a real unload never reach the route, so the batch is awaited and
+ * the unload leave fired by hand before the page goes.
+ */
+async function reload(p: Player, lastEvent: string, lastCount: number, view: string): Promise<void> {
+  await sent(p, lastEvent, lastCount);
+  const leaves = p.named('$pageleave').length;
+  await p.page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+  await sent(p, '$pageleave', leaves + 1);
+  await p.page.reload();
+  await expect(p.page.locator(view)).toBeVisible();
+}
+
+async function press(page: Page): Promise<void> {
+  const box = (await page.locator('#holdBtn').boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+}
+
+/** Host first, and the guest only once it can see the host's press, so `others_down` is settled. */
+async function holdTogether(host: Player, guest: Player): Promise<void> {
+  await press(host.page);
+  await expect(guest.page.locator('#holdPips .pip.on')).toHaveCount(1);
+  await press(guest.page);
+}
+
+/** Taps every gap, including a replace and a same-shape re-tap; returns the expected `shape_placed` events. */
+async function fillBoard(p: Player, seat: number, puzzle: Puzzle): Promise<Record<string, unknown>[]> {
+  const wrong = puzzle.pool.find((g) => !puzzle.answer.includes(g))!;
+  const gaps = Array.from({ length: puzzle.slots }, (_, i) => i).filter((i) => puzzle.owners[i] !== seat);
+  const first = gaps[0]!;
+  const last = gaps.at(-1)!;
+  const expected: Record<string, unknown>[] = [];
+
+  await p.page.click(`[data-glyph="${wrong}"]`);
+  expected.push({ method: 'tap', slot: first, replaced: false, fills_board: false });
+  await p.page.click(`[data-slot="${first}"]`);
+  for (const i of gaps) {
+    await p.page.click(`[data-glyph="${puzzle.answer[i]}"]`);
+    expected.push({ method: 'tap', slot: i, replaced: i === first, fills_board: i === last });
+  }
+  await p.page.click(`[data-slot="${last}"]`);
+  await p.page.click(`[data-glyph="${puzzle.answer[last]}"]`);
+  expected.push({ method: 'tap', slot: last, replaced: false, fills_board: true });
+  return expected;
+}
+
+async function brief(players: Player[]): Promise<void> {
+  for (const p of players) {
+    await expect(p.page.locator('#briefView')).toBeVisible();
+    await p.page.click('#briefReadyBtn');
+  }
+  for (const p of players) await expect(p.page.locator('#playView')).toBeVisible();
+}
+
+async function winTogether(host: Player, guest: Player): Promise<void> {
+  // both press and keep pressing past HOLD_MS; the verdict arrives from the shared clock
+  await holdTogether(host, guest);
+  for (const p of [host, guest]) await expect(p.page.locator('.verdict.win')).toBeVisible({ timeout: 15_000 });
+  await host.page.mouse.up();
+  await guest.page.mouse.up();
 }
 
 async function leave(page: Page): Promise<void> {
@@ -83,7 +154,10 @@ async function leave(page: Page): Promise<void> {
   await expect(page.locator('#homeView')).toBeVisible();
 }
 
-test('a table of two solves a board and reports every step', async ({ browser }) => {
+const screens = (p: Player, event: string) => p.named(event).map((e) => e.properties.screen);
+
+test('a table of two plays three rounds and reports every step', async ({ browser }) => {
+  const started = Date.now();
   const host = await player(browser, 'Host');
   await host.page.click('#createBtn');
   await expect(host.page.locator('#lobbyView')).toBeVisible();
@@ -94,78 +168,165 @@ test('a table of two solves a board and reports every step', async ({ browser })
   await guest.page.fill('#joinCode', code);
   await guest.page.click('#joinBtn');
   await expect(guest.page.locator('#lobbyView')).toBeVisible();
+  // a refresh comes back into the same room as the same player
+  await reload(guest, 'room_joined', 1, '#lobbyView');
 
   await host.page.click('#readyBtn');
   await guest.page.click('#readyBtn');
   await expect(host.page.locator('#startBtn')).toBeEnabled();
   await host.page.click('#startBtn');
+  await brief([host, guest]);
 
-  for (const p of [host, guest]) {
-    await expect(p.page.locator('#briefView')).toBeVisible();
-    await p.page.click('#briefReadyBtn');
-  }
-  for (const p of [host, guest]) await expect(p.page.locator('#playView')).toBeVisible();
+  // a hold on unfinished boards resolves as a miss; releasing in turn settles `others_down`
+  await holdTogether(host, guest);
+  await expect(host.page.locator('#holdBtn')).toHaveClass(/miss/, { timeout: 10_000 });
+  await host.page.mouse.up();
+  await expect(guest.page.locator('#holdPips .pip.on')).toHaveCount(1);
+  await guest.page.mouse.up();
 
   // seats are dealt in join order, so the host holds seat 0 and the guest seat 1
-  const puzzle = buildPuzzle(puzzleKey(code, 1), 2);
-  const placed: number[] = [];
-  for (const [seat, p] of [host, guest].entries()) {
-    let count = 0;
-    for (let i = 0; i < puzzle.slots; i++) {
-      if (puzzle.owners[i] === seat) continue;
-      await p.page.click(`[data-glyph="${puzzle.answer[i]}"]`);
-      count++;
-    }
-    placed.push(count);
-  }
+  const puzzle1 = buildPuzzle(puzzleKey(code, 1), 2);
+  const shapes1 = [await fillBoard(host, 0, puzzle1), await fillBoard(guest, 1, puzzle1)];
+  await winTogether(host, guest);
 
-  // both press and keep pressing past HOLD_MS; the verdict arrives from the shared clock
-  for (const p of [host, guest]) {
-    const box = (await p.page.locator('#holdBtn').boundingBox())!;
-    await p.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await p.page.mouse.down();
-  }
-  await expect(host.page.locator('.verdict.win')).toBeVisible({ timeout: 15_000 });
-  await expect(guest.page.locator('.verdict.win')).toBeVisible({ timeout: 15_000 });
-  for (const p of [host, guest]) await p.page.mouse.up();
+  // a rematch, solved more slowly than the first so the record stands; the guest comes
+  // back into the round mid-play, which is not a second start of it
+  await sent(host, 'round_won', 1);
+  const firstMs = host.named('round_won')[0]!.properties.elapsed_ms as number;
+  await host.page.click('[data-act="newround"]');
+  await brief([host, guest]);
+  await reload(guest, 'play_began', 2, '#playView');
+  const puzzle2 = buildPuzzle(puzzleKey(code, 2), 2);
+  const shapes2 = [await fillBoard(host, 0, puzzle2), await fillBoard(guest, 1, puzzle2)];
+  await host.page.waitForTimeout(firstMs + 1000);
+  await winTogether(host, guest);
 
+  // a third round that the table walks out of
+  await host.page.click('[data-act="newround"]');
+  await brief([host, guest]);
   await leave(guest.page);
   await leave(host.page);
+  for (const p of [host, guest]) await sent(p, 'room_left', 1);
 
-  // the SDK batches on a timer, so wait for the last event of the game to be sent
-  for (const p of [host, guest]) {
-    await expect.poll(() => p.named('room_left').length, { timeout: 15_000 }).toBe(1);
-  }
-
-  expect(host.named('room_created')).toMatchObject([{ properties: { room_code: code, attempts: 0 } }]);
+  // the backend is shared, so a code can collide with a room an earlier run left behind
+  expect(host.named('room_created')).toMatchObject([{ properties: { room_code: code } }]);
+  expect(host.named('room_created')[0]!.properties.attempts).toBeGreaterThanOrEqual(0);
   expect(guest.named('room_joined')).toMatchObject([
     { properties: { room_code: code, via: 'code', already_in: false } },
+    { properties: { room_code: code, via: 'rejoin', already_in: true } },
+    { properties: { room_code: code, via: 'rejoin', already_in: true } },
   ]);
 
-  const screens = (p: Player) => p.named('$pageview').map((e) => e.properties.screen);
-  expect(screens(host)).toEqual(['home', 'lobby', 'brief', 'play', 'home']);
-  expect(screens(guest)).toEqual(['home', 'lobby', 'brief', 'play', 'home']);
+  const hostScreens = ['home', 'lobby', 'brief', 'play', 'brief', 'play', 'brief', 'play', 'home'];
+  const guestScreens = [
+    'home', 'lobby', 'home', 'lobby', 'brief', 'play', 'brief', 'play', 'home', 'play', 'brief', 'play', 'home',
+  ];
+  expect(screens(host, '$pageview')).toEqual(hostScreens);
+  expect(screens(guest, '$pageview')).toEqual(guestScreens);
+  // every screen but the last one shown is left, and a leave on unload goes as a beacon
+  expect(screens(host, '$pageleave')).toEqual(hostScreens.slice(0, -1));
+  expect(screens(guest, '$pageleave')).toEqual(guestScreens.slice(0, -1));
+  const beacons = guest.named('$pageleave').map((e) => e.transport === 'ping');
+  expect(beacons).toEqual(guestScreens.slice(0, -1).map((_, i) => i === 1 || i === 7));
 
   expect(host.named('round_started')).toMatchObject([
     { properties: { player_count: 2, round_id: 1, mode: 'call' } },
+    { properties: { player_count: 2, round_id: 2, mode: 'call' } },
+    { properties: { player_count: 2, round_id: 3, mode: 'call' } },
   ]);
+  expect(host.named('new_round')).toMatchObject([
+    { properties: { rounds_so_far: 1 } },
+    { properties: { rounds_so_far: 2 } },
+  ]);
+  expect(guest.named('round_started')).toHaveLength(0);
+
   for (const [i, p] of [host, guest].entries()) {
+    // once per browser: a reload finds the same uid already identified
     expect(p.named('$identify')).toHaveLength(1);
     expect(p.named('player_ready')).toMatchObject([{ properties: { ready: true } }]);
-    expect(p.named('restriction_dealt')).toMatchObject([{ properties: { seat: i } }]);
-    expect(p.named('brief_acknowledged')).toHaveLength(1);
-    expect(p.named('play_began')).toMatchObject([{ properties: { round_id: 1 } }]);
-    expect(p.named('shape_placed')).toHaveLength(placed[i]!);
-    expect(p.named('shape_placed').at(-1)).toMatchObject({ properties: { method: 'tap', fills_board: true } });
-    expect(p.named('hold_started')).toHaveLength(1);
-    expect(p.named('hold_released')).toMatchObject([{ properties: { released_by: 'pointer' } }]);
-    expect(p.named('attempt_resolved')).toMatchObject([{ properties: { won: true, round_id: 1 } }]);
-    expect(p.named('round_won')).toMatchObject([
-      { properties: { round_id: 1, player_count: 2, is_new_best: true, room_code: code, is_host: i === 0 } },
+    expect(p.named('restriction_dealt')).toMatchObject([
+      { properties: { seat: i } },
+      { properties: { seat: i } },
+      { properties: { seat: i } },
     ]);
-    expect(p.named('room_left')).toMatchObject([{ properties: { screen: 'play', rounds_played: 1 } }]);
+    const briefed = p.named('brief_acknowledged').map((e) => e.properties.ms_on_brief as number);
+    expect(briefed).toHaveLength(3);
+    for (const ms of briefed) {
+      expect(ms).toBeGreaterThan(0);
+      expect(ms).toBeLessThan(60_000);
+    }
+    expect(p.named('play_began')).toMatchObject([
+      { properties: { round_id: 1 } },
+      { properties: { round_id: 2 } },
+      { properties: { round_id: 3 } },
+    ]);
 
-    // the name is a person property, never on an event; the uid is the identity
+    const shapes = p.named('shape_placed').map((e) => e.properties);
+    expect(shapes).toMatchObject([...shapes1[i]!, ...shapes2[i]!]);
+
+    const context = {
+      environment: 'local',
+      room_code: code,
+      mode: 'call',
+      player_count: 2,
+      is_host: i === 0,
+      seat: i,
+    };
+    expect(p.named('hold_started')).toMatchObject([
+      { properties: { ...context, round_id: 1, others_down: i } },
+      { properties: { ...context, round_id: 1, others_down: i } },
+      { properties: { ...context, round_id: 2, others_down: i } },
+    ]);
+    const released = p.named('hold_released').map((e) => e.properties);
+    expect(released).toMatchObject([
+      { released_by: 'pointer', others_down: i === 0 ? 1 : 0 },
+      { released_by: 'pointer' },
+      { released_by: 'pointer' },
+    ]);
+    for (const r of released) {
+      expect(r.held_ms as number).toBeGreaterThan(1500);
+      expect(r.held_ms as number).toBeLessThan(15_000);
+    }
+    expect(p.named('attempt_resolved')).toMatchObject([
+      { properties: { won: false, round_id: 1, player_count: 2 } },
+      { properties: { won: true, round_id: 1, player_count: 2 } },
+      { properties: { won: true, round_id: 2, player_count: 2 } },
+    ]);
+
+    const won = p.named('round_won').map((e) => e.properties);
+    expect(won).toMatchObject([
+      { ...context, round_id: 1, player_count: 2, is_new_best: true },
+      { ...context, round_id: 2, player_count: 2, is_new_best: false },
+    ]);
+    expect(won[0]!.elapsed_ms as number).toBeGreaterThan(0);
+    expect(won[0]).not.toHaveProperty('prev_best_ms');
+    expect(won[1]!.prev_best_ms).toBe(won[0]!.elapsed_ms);
+    expect(won[1]!.elapsed_ms as number).toBeGreaterThan(won[0]!.elapsed_ms as number);
+
+    // one per change to the room's record (a win sets status, then the time); each of
+    // the guest's reloads resets the store's dedupe, so one more apiece
+    const groups = p.named('$groupidentify').map((e) => e.properties);
+    expect(groups).toHaveLength(i === 0 ? 5 : 7);
+    expect(groups[0]).toMatchObject({
+      $group_type: 'room',
+      $group_key: code,
+      $group_set: { mode: 'call', player_count: 0, rounds_played: 0 },
+    });
+    expect(groups[0]!.$group_set).not.toHaveProperty('best_ms');
+    const record = groups.at(-1)!.$group_set as Record<string, unknown>;
+    expect(record).toMatchObject({ player_count: 2, rounds_played: 2, best_ms: won[0]!.elapsed_ms });
+    expect(Date.parse(record.created_at as string)).toBeGreaterThan(started - 60_000);
+
+    // the third round was dealt but never finished, so it does not count
+    expect(p.named('room_left')).toMatchObject([
+      { properties: { room_code: code, screen: 'play', rounds_played: 2 } },
+    ]);
+    const afterLeave = p.named('$pageview').at(-1)!.properties;
+    for (const key of Object.keys(context)) {
+      if (key !== 'environment') expect(afterLeave).not.toHaveProperty(key);
+    }
+    expect((afterLeave.$groups as Record<string, unknown> | undefined)?.room).toBeUndefined();
+
     for (const e of p.events) expect(e.properties.name).toBeUndefined();
     const names = p.named('$set').map((e) => (e.properties.$set as { name?: string } | undefined)?.name);
     expect(names).toContain(i === 0 ? 'Host' : 'Guest');
