@@ -21,9 +21,17 @@ interface Player {
   named: (event: string) => Captured[];
 }
 
+/** What each page and the SDK did, printed only when the test fails. */
+const diagnostics: string[] = [];
+
+test.afterEach(({}, testInfo) => {
+  if (testInfo.status !== 'passed') console.log(diagnostics.join('\n'));
+  diagnostics.length = 0;
+});
+
 /** The SDK gzips its batches; a form body is its fallback when it cannot. */
 function decode(req: Request): Captured[] {
-  const buf = req.postDataBuffer();
+  const buf = req.postDataBuffer() ?? (req.postData() ? Buffer.from(req.postData()!) : null);
   if (!buf) return [];
   const raw = buf.toString('utf8');
   let text = raw;
@@ -63,7 +71,14 @@ async function player(browser: Browser, name: string): Promise<Player> {
   const events: Captured[] = [];
   await context.route(POSTHOG, async (route) => {
     const req = route.request();
-    if (req.method() === 'POST') events.push(...decode(req));
+    if (req.method() === 'POST') {
+      const got = decode(req);
+      events.push(...got);
+      const path = new URL(req.url()).pathname + new URL(req.url()).search;
+      const type = req.headers()['content-type'] ?? '';
+      const bytes = req.postDataBuffer()?.length ?? -1;
+      diagnostics.push(`${name} ${path} ${type} bytes=${bytes} events=${got.map((e) => e.event).join(',')}`);
+    }
     const json = req.method() === 'POST' || req.url().endsWith('/config');
     // flags and remote config get an empty answer, which leaves every SDK default in place
     return route.fulfill({
@@ -73,7 +88,11 @@ async function player(browser: Browser, name: string): Promise<Player> {
     });
   });
   const page = await context.newPage();
-  await page.goto('/');
+  page.on('console', (m) => {
+    if (/posthog/i.test(m.text())) diagnostics.push(`${name} console.${m.type()} ${m.text().slice(0, 200)}`);
+  });
+  page.on('pageerror', (e) => diagnostics.push(`${name} pageerror ${String(e).slice(0, 200)}`));
+  await page.goto('/?__posthog_debug=true');
   // anonymous sign-in is a round trip to Firebase and can take a few seconds cold
   await expect(page.locator('#connecting')).toBeHidden({ timeout: 20_000 });
   await page.fill('#nameInput', name);
