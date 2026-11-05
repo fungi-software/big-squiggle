@@ -55,15 +55,17 @@ src/
   presence.ts       onDisconnect presence and the server clock offset
   store.ts          the live room snapshot and the transitions nobody presses
   render.ts         picks a screen from room status
-  views/            home, lobby, brief, play
+  views/            home, lobby, brief, play, plus the topbar and the round clock
   glyphs.ts         the 120 marks and their SVG
   puzzle.ts         the seeded deal — answer, plate, seat ownership
   random.ts         mulberry32 and friends
   codes.ts          game-code words, "RAVEN-5" token parsing
   restrictions.ts   the two condition sets, for a call and for a table
   state.ts          the game state, persistence, and the grading timer
-  ui.ts             rendering
+  session.ts        the name and last room, remembered in localStorage
   events.ts         input and drag-and-drop wiring
+  dom.ts            element lookup and escaping helpers
+  icons.ts          the restriction icons as inline SVG
   confetti.ts       the fanfare
   styles.css
 tests/
@@ -74,6 +76,11 @@ tests/
   rules.test.ts     security rules; runs under `npm run test:rules`
   e2e/game.spec.ts  two browsers play three rounds; asserts the PostHog events sent
 ```
+
+CI typechecks, tests, builds, and runs the browser test against the emulator on every
+pull request and every push to `main`. With a `FIREBASE_SERVICE_ACCOUNT_BIG_SQUIGGLE`
+(or `FIREBASE_SERVICE_ACCOUNT`) secret set, a push to `main` also deploys to Firebase
+Hosting and a pull request from this repo gets a preview channel.
 
 ## Analytics
 
@@ -88,9 +95,6 @@ where they typed it, and never an event property. The lobby roster is marked
 There is no consent banner. Open the game with `?no-track` to opt a browser out; it
 persists in that browser until its site data is cleared.
 
-Deploys to Firebase Hosting from `main` once `FIREBASE_SERVICE_ACCOUNT` and
-`FIREBASE_PROJECT_ID` are set; until then CI just typechecks, tests, and builds.
-
 ## Where this is going
 
 Today the game is honour-system: every device computes the puzzle locally, players
@@ -101,3 +105,7 @@ and the moment the whole table wins are all handled by the app.
 [`docs/PHASE-1-2.md`](docs/PHASE-1-2.md) specifies the next two phases in full:
 rooms on the Firebase free tier, and a validation that only resolves while every
 player is holding it down.
+
+## License
+
+[MIT](LICENSE).
