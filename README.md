@@ -35,7 +35,9 @@ which needs a JVM). To run against the real project instead, copy `.env.example`
 `database.rules.json` is what actually protects the data.
 
 Other scripts: `npm run build`, `npm run preview`, `npm run typecheck`, `npm test`,
-and `npm run test:rules` (security rules, against the emulator).
+`npm run test:rules` (security rules, against the emulator), and `npm run test:e2e`
+(a browser test where a table of two plays through three rounds and every PostHog event
+sent is checked; `npm run test:e2e:emulator` wraps it in the emulator suite, as CI does).
 
 Deploying rules: `npx firebase deploy --only database`.
 
@@ -46,6 +48,7 @@ index.html          markup only; the page shell
 src/
   main.ts           boot: sign in, rejoin, wire events, first render
   firebase.ts       app init, anonymous auth, emulator wiring
+  analytics.ts      the only module that imports posthog-js; typed event helpers
   room.ts           create / join / start / leave / hold — thin wrappers over the logic
   live.ts           the hold predicate every device evaluates identically
   roomLogic.ts      pure room rules: seating, readiness, host succession, routing
@@ -71,12 +74,26 @@ tests/
   roomLogic.test.ts the room rules, without needing a database
   live.test.ts      the hold-to-validate predicate
   rules.test.ts     security rules; runs under `npm run test:rules`
+  e2e/game.spec.ts  two browsers play three rounds; asserts the PostHog events sent
 ```
 
-CI typechecks, tests, and builds every pull request and every push to `main`. With a
-`FIREBASE_SERVICE_ACCOUNT_BIG_SQUIGGLE` (or `FIREBASE_SERVICE_ACCOUNT`) secret set, a
-push to `main` also deploys to Firebase Hosting and a pull request from this repo gets
-a preview channel.
+CI typechecks, tests, builds, and runs the browser test against the emulator on every
+pull request and every push to `main`. With a `FIREBASE_SERVICE_ACCOUNT_BIG_SQUIGGLE`
+(or `FIREBASE_SERVICE_ACCOUNT`) secret set, a push to `main` also deploys to Firebase
+Hosting and a pull request from this repo gets a preview channel.
+
+## Analytics
+
+PostHog, through `src/analytics.ts` and nothing else. With `VITE_POSTHOG_KEY` unset the
+SDK is never loaded, which is the emulator path and every unit test. Analytics never
+changes the game: nothing PostHog returns feeds the deal or the hold verdict.
+
+The Firebase anonymous uid is the identity. A player's name is a person property, set
+where they typed it, and never an event property. The lobby roster is marked
+`ph-no-capture`, and inputs are masked in session replay.
+
+There is no consent banner. Open the game with `?no-track` to opt a browser out; it
+persists in that browser until its site data is cleared.
 
 ## Where this is going
 

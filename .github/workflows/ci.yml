@@ -35,6 +35,24 @@ jobs:
 
       - run: npm run build
 
+      # the browser test plays a table of two against the emulator, which needs a JVM
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run test:e2e:emulator
+
+      # the trace is the only way to see what a browser did on a runner
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
+
       - name: Deploy to Firebase Hosting
         if: ${{ github.ref == 'refs/heads/main' && env.FIREBASE_SERVICE_ACCOUNT != '' }}
         uses: FirebaseExtended/action-hosting-deploy@v0

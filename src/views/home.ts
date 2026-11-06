@@ -1,3 +1,4 @@
+import { setPlayerName, track } from '../analytics';
 import { byId } from '../dom';
 import { createRoom, joinRoom, normalizeCode, RoomError } from '../room';
 import { rememberedName, rememberName } from '../session';
@@ -31,7 +32,11 @@ function setError(message: string): void {
   el.hidden = !message;
 }
 
-async function attempt(run: (uid: string, name: string) => Promise<string>): Promise<void> {
+async function attempt(
+  run: (uid: string, name: string) => Promise<string>,
+  via: 'invite' | 'code' | 'create',
+  code?: string,
+): Promise<void> {
   // a second create while already seated would strand the first room without its host
   const uid = getUid();
   if (!uid || busy || getRoom()) return;
@@ -48,7 +53,9 @@ async function attempt(run: (uid: string, name: string) => Promise<string>): Pro
   setError('');
   try {
     enterRoom(await run(uid, name));
+    setPlayerName(name);
   } catch (err) {
+    track('join_failed', { room_code: code, via, kind: err instanceof RoomError ? err.kind : 'network' });
     // a dead invite would leave only a button that cannot work, so offer everything again
     if (err instanceof RoomError) clearInvite();
     setError(err instanceof RoomError ? (MESSAGES[err.kind] ?? 'Could not join.') : 'Could not reach the game.');
@@ -60,9 +67,9 @@ async function attempt(run: (uid: string, name: string) => Promise<string>): Pro
 export function joinInvite(): Promise<void> {
   const code = invite;
   return attempt(async (uid, name) => {
-    await joinRoom(code, uid, name);
+    await joinRoom(code, uid, name, 'invite');
     return code;
-  });
+  }, 'invite', code);
 }
 
 export function mountHome(rerender: () => void): void {
@@ -72,7 +79,7 @@ export function mountHome(rerender: () => void): void {
   nameField.addEventListener('input', renderHome);
 
   byId('createBtn').addEventListener('click', () => {
-    void attempt((uid, name) => createRoom(uid, name)).then(rerender);
+    void attempt((uid, name) => createRoom(uid, name), 'create').then(rerender);
   });
 
   const codeField = byId<HTMLInputElement>('joinCode');
@@ -88,9 +95,9 @@ export function mountHome(rerender: () => void): void {
       return;
     }
     void attempt(async (uid, name) => {
-      await joinRoom(code, uid, name);
+      await joinRoom(code, uid, name, 'code');
       return code;
-    }).then(rerender);
+    }, 'code', code).then(rerender);
   };
 
   byId('joinBtn').addEventListener('click', join);

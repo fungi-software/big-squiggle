@@ -1,3 +1,4 @@
+import { track, type HoldRelease } from './analytics';
 import { byId } from './dom';
 import { nextRound, pressHold, releaseHold } from './room';
 import { firstOpen, place, resetBoard, S } from './state';
@@ -35,8 +36,11 @@ export function mountBoard(rerender: () => void): void {
     if (!b) return;
     // nothing picked yet, so the shape goes to the first gap; a full board needs a pick
     const i = S.sel >= 0 ? S.sel : firstOpen();
-    if (i < 0 || !place(i, parseInt(b.dataset.glyph!, 10))) return;
+    const g = parseInt(b.dataset.glyph!, 10);
+    const had = S.draft[i];
+    if (i < 0 || !place(i, g)) return;
     S.sel = firstOpen();
+    track('shape_placed', { method: 'tap', slot: i, replaced: had != null && had !== g, fills_board: S.sel < 0 });
     rerender();
   });
 
@@ -119,15 +123,22 @@ export function mountBoard(rerender: () => void): void {
     clearHot();
     const i = parseInt(b.dataset.slot!, 10);
     if (!S.pinned[i]) {
+      let had = S.draft[i];
+      let placed = false;
       if (drag.kind === 'glyph') {
-        place(i, drag.value);
+        placed = place(i, drag.value);
+        if (placed) had = had !== drag.value ? had : null;
       } else if (drag.value !== i) {
         const j = drag.value;
         const t = S.draft[i]!;
         S.draft[i] = S.draft[j]!;
         S.draft[j] = t;
+        placed = true;
       }
       S.sel = firstOpen();
+      if (placed) {
+        track('shape_placed', { method: 'drag', slot: i, replaced: had != null, fills_board: S.sel < 0 });
+      }
     }
     drag = null;
     rerender();
@@ -146,7 +157,7 @@ export function mountBoard(rerender: () => void): void {
     const room = getRoom();
     const uid = getUid();
     if (!room || !uid || room.meta.status !== 'playing') return;
-    void pressHold(room.code, uid, isMine(room));
+    void pressHold(room, uid, isMine(room));
     try {
       // capture keeps a dragged finger on the button; it must never block the press
       pill.setPointerCapture(e.pointerId);
@@ -155,16 +166,16 @@ export function mountBoard(rerender: () => void): void {
     }
   });
 
-  const letGo = () => {
+  const letGo = (reason: HoldRelease) => () => {
     const room = getRoom();
     const uid = getUid();
-    if (room && uid) void releaseHold(room.code, uid);
+    if (room && uid) void releaseHold(room, uid, reason);
   };
-  pill.addEventListener('pointerup', letGo);
-  pill.addEventListener('pointercancel', letGo);
+  pill.addEventListener('pointerup', letGo('pointer'));
+  pill.addEventListener('pointercancel', letGo('cancel'));
   // a dragged-away finger or an alt-tab must not leave the button held down
-  pill.addEventListener('pointerleave', letGo);
-  window.addEventListener('blur', letGo);
+  pill.addEventListener('pointerleave', letGo('leave'));
+  window.addEventListener('blur', letGo('blur'));
 
   byId('verdictSlot').addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');

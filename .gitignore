@@ -11,6 +11,8 @@ firebase-debug.log
 .vscode/
 .playwright-mcp/
 tests/__screenshots__/
+test-results/
+playwright-report/
 
 # local firebase config (real project); .env.example documents the keys
 .env.local

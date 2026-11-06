@@ -5,7 +5,7 @@ import {
 } from '../src/restrictions';
 import {
   allBriefed, assignSeats, canStart, deriveScreen, elapsedMs, formatDuration, isMember,
-  gameMode, isNewBest, isStale, nextHost, roundGap, solveBadge,
+  gameMode, isNewBest, isStale, nextHost, roundGap, roundsPlayed, solveBadge,
   onlineUids, puzzleKey, restrictionsForRound, ROOM_TTL_MS, seatedUids, startBlocker,
   type RoomSnapshot,
 } from '../src/roomLogic';
@@ -476,5 +476,16 @@ describe('which set of conditions a room plays with', () => {
       expect(r.t.length).toBeGreaterThan(0);
       expect(r.d).toMatch(/^(Turn|Mute|Do not|Keep)/);
     }
+  });
+});
+
+describe('rounds played', () => {
+  it('counts a round once it is over, won or abandoned', () => {
+    expect(roundsPlayed({ roundId: 1, status: 'lobby' })).toBe(0);
+    expect(roundsPlayed({ roundId: 1, status: 'playing' })).toBe(0);
+    expect(roundsPlayed({ roundId: 1, status: 'won' })).toBe(1);
+    // an abandoned round moves the number on, so the next lobby counts it
+    expect(roundsPlayed({ roundId: 2, status: 'lobby' })).toBe(1);
+    expect(roundsPlayed({ roundId: 2, status: 'won' })).toBe(2);
   });
 });
